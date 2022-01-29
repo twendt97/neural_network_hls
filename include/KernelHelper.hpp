@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Settings.hpp"
 #include "Vitis_Libraries/blas/L1/include/hw/xf_blas.hpp"
 #include "ap_int.h"
 #include "hls_stream.h"
@@ -87,7 +86,7 @@ namespace uz_mlp
         xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, input, l_strInput);
         xf::blas::readVec2Stream<t_DataType, 1>(bias, p_n, l_strBias);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_n, p_k, (t_DataType)1, l_strWeights, l_strInput, (t_DataType)1, l_strBias, l_strMv);
-        ApplyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, sigmoid<t_DataType>);
+        ApplyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, uz_mlp::sigmoid<t_DataType>);
         xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, output);
     }
 

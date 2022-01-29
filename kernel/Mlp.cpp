@@ -1,10 +1,6 @@
 #include "KernelHelper.hpp"
+#include "Settings.hpp"
 #include <string.h>
-
-#ifndef __SYNTHESIS__
-#include <iostream>
-#include "Simulation.hpp"
-#endif
 
 using namespace uz_mlp;
 
@@ -64,9 +60,13 @@ void MLP(
     NN_DataType layerBuffer0[N], layerBuffer1[N];
     memcpy(inputData, input, *numberInputs * sizeof(NN_DataType));
 
-
-    ProcessLayer<NN_DataType, 1, 0>(bramWeight, inputData, bramBias, layerBuffer0, *numberNeurons, *numberInputs);
-    
+    ProcessLayer<NN_DataType, ParEntries, logParEntries>(
+        bramWeight,
+        inputData,
+        bramBias,
+        layerBuffer0,
+        *numberNeurons,
+        *numberInputs);
 
     // only write to bramLayerResults to get a write only one port interface and not dual port
     if (*exportLayers != 0)
@@ -90,17 +90,16 @@ HIDDEN:
 
         CopyArray<NN_DataType>(layerBuffer0, layerBuffer1, *numberNeurons);
     }
-    ProcessLayer<NN_DataType, 1, 0>(
+    ProcessLayer<NN_DataType, ParEntries, logParEntries>(
         &bramWeight[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
         layerBuffer1,
         &bramBias[*numberLayers * *numberNeurons],
         layerBuffer0,
         *numberOutputs,
         *numberNeurons);
-    
+
     if (*exportLayers != 0)
         CopyArray<NN_DataType>(layerBuffer0, &bramLayerResults[*numberLayers * *numberNeurons], *numberOutputs);
-    
 
     memcpy(output, layerBuffer0, *numberOutputs * sizeof(NN_DataType));
 }

@@ -2,6 +2,7 @@
 #define TEST_MLP_CRANIUM
 // #define TEST_TRAINING
 
+#include "Settings.hpp"
 #include "Simulation.hpp"
 #include <vector>
 #include <algorithm>

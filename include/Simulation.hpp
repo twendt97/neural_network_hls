@@ -2,7 +2,6 @@
 
 #include <Eigen/Dense>
 #include "Cranium/src/cranium.h"
-#include "KernelHelper.hpp"
 
 // cranium network defines
 constexpr size_t cranFeatures = 5;
