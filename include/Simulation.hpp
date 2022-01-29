@@ -2,14 +2,7 @@
 
 #include <Eigen/Dense>
 #include "Cranium/src/cranium.h"
-
-// cranium network defines
-constexpr size_t cranFeatures = 5;
-constexpr size_t cranNumHiddenLayers = 5;
-constexpr size_t cranHiddenSize = 64;
-constexpr size_t cranOutputs = 8;
-constexpr Activation defaultActivation = &linear;
-constexpr float precTreshold = 1.0e-1;
+#include "Settings.hpp"
 
 using NN_Matrix = Eigen::Matrix<NN_DataType, N, K, Eigen::RowMajor>;
 using NN_Vector = Eigen::Matrix<NN_DataType, N, 1, Eigen::ColMajor>;

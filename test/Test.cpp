@@ -43,7 +43,7 @@ int main(void)
         hiddenSize[i] = N;
     }
 
-    Network *net = createNetwork(KInput, NumberOfHidden, hiddenSize, hiddenActivation, NOutput, sigmoid);
+    Network *net = createNetwork(KInput, NumberOfHidden, hiddenSize, hiddenActivation, NOutput, linear);
 
     extractCraniumWeights(
         &weightMemory[N * KInput],

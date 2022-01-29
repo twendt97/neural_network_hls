@@ -17,8 +17,15 @@ constexpr unsigned KInput = 8;
 constexpr unsigned NOutput = 8;
 constexpr unsigned NumberOfHidden = 4;
 
+// Cosim only works if the paralellism for input and hidden layers
+// is the same
 constexpr unsigned ParEntries = 8;
 constexpr unsigned logParEntries = 3;
+constexpr unsigned ParEntriesInput = ParEntries;
+constexpr unsigned logParEntriesInput = logParEntries;
+constexpr unsigned ParEntriesOutput = 2;
+constexpr unsigned logParEntriesOutput = 1;
+
 
 // Training
 constexpr unsigned maxSamples = 10;

@@ -8,6 +8,7 @@
 namespace uz_mlp
 {
     // Activation functions
+
     template <typename t_DataType>
     t_DataType relu(t_DataType x)
     {
@@ -38,8 +39,8 @@ namespace uz_mlp
 
     template <typename t_DataType, unsigned int t_ParEntries>
     void ApplyFunction(
-        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> &p_in,
-        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> &p_out,
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_in,
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_out,
         unsigned int p_n,
         t_DataType (*function)(t_DataType))
     {
@@ -90,17 +91,77 @@ namespace uz_mlp
         xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, output);
     }
 
-    template <typename t_DataType>
+    template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
+    void InputLayer(
+        t_DataType *weights,
+        t_DataType *input,
+        t_DataType *bias,
+        t_DataType *output,
+        unsigned int p_n,
+        unsigned int p_k)
+    {
+#pragma HLS DATAFLOW
+        // Stream that holds ParEntries operands
+        hls::stream<typename xf::blas::WideType<t_DataType, 1 << t_logParEntries>::t_TypeInt> l_strWeights("Weights");
+        hls::stream<typename xf::blas::WideType<t_DataType, 1 << t_logParEntries>::t_TypeInt> l_strInput("Input");
+        // Stream that holds exactly one operand.
+        // This is fed to a function that assembles a vector from the incoming entries
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strOutput("Output");
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strMv("Matrix Vector Result");
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strBias("Bias");
+#pragma HLS DATAFLOW
+        xf::blas::gem2Stream<t_DataType, t_ParEntries>(p_n, p_k, weights, l_strWeights);
+        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, input, l_strInput);
+        xf::blas::readVec2Stream<t_DataType, 1>(bias, p_n, l_strBias);
+        xf::blas::gemv<t_DataType, t_logParEntries>(p_n, p_k, (t_DataType)1, l_strWeights, l_strInput, (t_DataType)1, l_strBias, l_strMv);
+        ApplyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, uz_mlp::sigmoid<t_DataType>);
+        xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, output);
+    }
+
+    template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
+    void OutputLayer(
+        t_DataType *weights,
+        t_DataType *input,
+        t_DataType *bias,
+        t_DataType *output,
+        unsigned int p_n,
+        unsigned int p_k)
+    {
+#pragma HLS DATAFLOW
+        // Stream that holds ParEntries operands
+        hls::stream<typename xf::blas::WideType<t_DataType, 1 << t_logParEntries>::t_TypeInt> l_strWeights("Weights");
+        hls::stream<typename xf::blas::WideType<t_DataType, 1 << t_logParEntries>::t_TypeInt> l_strInput("Input");
+        // Stream that holds exactly one operand.
+        // This is fed to a function that assembles a vector from the incoming entries
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strMv("Matrix Vector Result");
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strBias("Bias");
+#pragma HLS DATAFLOW
+        xf::blas::gem2Stream<t_DataType, t_ParEntries>(p_n, p_k, weights, l_strWeights);
+        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, input, l_strInput);
+        xf::blas::readVec2Stream<t_DataType, 1>(bias, p_n, l_strBias);
+        xf::blas::gemv<t_DataType, t_logParEntries>(p_n, p_k, (t_DataType)1, l_strWeights, l_strInput, (t_DataType)1, l_strBias, l_strMv);
+        xf::blas::writeStream2Vec<t_DataType, 1>(l_strMv, p_n, output);
+    }
+
+    template <typename t_DataType, unsigned int t_ParEntries>
     void CopyArray(
         t_DataType *input,
         t_DataType *output,
         unsigned int size)
     {
+#ifndef __SYNTHESIS__
+        assert((size % t_ParEntries) == 0);
+#endif
+        unsigned int l_parBlocks = size / t_ParEntries;
     COPY_ARRAY:
-        for (unsigned int i = 0; i < size; i++)
+        for (unsigned int i = 0; i < l_parBlocks; i++)
         {
 #pragma HLS PIPELINE
-            output[i] = input[i];
+            for (unsigned int j = 0; j < t_ParEntries; j++)
+            {
+#pragma HLS UNROLL
+                output[i * t_ParEntries + j] = input[i * t_ParEntries + j];
+            }
         }
     }
 
