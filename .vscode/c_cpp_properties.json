@@ -10,10 +10,8 @@
                 "/opt/Xilinx/Vitis/2020.1/lnx64/tools/auto_cc/include",
                 "/usr/include/c++/9/",
                 "${workspaceFolder}",
-                "${workspaceFolder}/Eigen",
-                "${workspaceFolder}/Vitis_Libraries",
-                "${workspaceFolder}/hlslib/include",
-                "${workspaceFolder}/Cranium/src"
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/Vitis_Libraries/blas/L1/include/hw"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/g++-9",
