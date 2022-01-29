@@ -1,0 +1,53 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build debug",
+            "type": "shell",
+            "command": "/usr/bin/g++-9",
+            //"command": "/opt/Xilinx/Vitis/2020.1/lnx64/tools/gcc/bin/gcc",
+            "args": [
+                "-I/opt/Xilinx/Vitis/2020.1/include/etc",
+                "-I/opt/Xilinx/Vitis/2020.1/include/ap_sysc",
+                "-I/opt/Xilinx/Vitis/2020.1/include",
+                "-I/opt/Xilinx/Vitis/2020.1/lnx64/tools/systemc/include",
+                "-I/opt/Xilinx/Vitis/2020.1/lnx64/tools/auto_cc/include",
+                "-I${workspaceFolder}",
+                "-I/usr/include/c++/9/",
+                // "-I${workspaceFolder}/Vitis_Libraries",
+                // "-I${workspaceFolder}/Vitis_Libraries/xf_blas",
+                "-I${workspaceFolder}/Vitis_Libraries_New/blas/L1/include/hw",
+                "-I${workspaceFolder}/hlslib/include",
+                "-L/opt/Xilinx/Vitis/2020.1/lnx64/tools/systemc/lib",
+                "-g3",
+                "-O0",
+                "-pthread",
+                //"-Wall",
+                "${workspaceFolder}/*.cpp",
+                "-o",
+                "${workspaceFolder}/build/${workspaceFolderBasename}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "copy reference results",
+            "type": "shell",
+            "command": "cp ${workspaceFolder}/result.golden.dat ${workspaceFolder}/build/"
+        },
+        {
+            "label": "clean up build",
+            "type": "shell",
+            "command": "rm ${workspaceFolder}/build/result.golden.dat"
+        },
+        {
+            "label": "prepare for debug",
+            "dependsOn": [
+                "copy reference results",
+                "build debug"
+            ]
+        },
+    ]
+}

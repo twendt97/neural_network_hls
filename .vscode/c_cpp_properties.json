@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/opt/Xilinx/Vitis/2020.1/include/etc",
+                "/opt/Xilinx/Vitis/2020.1/include/ap_sysc",
+                "/opt/Xilinx/Vitis/2020.1/include",
+                "/opt/Xilinx/Vitis/2020.1/lnx64/tools/systemc/include",
+                "/opt/Xilinx/Vitis/2020.1/lnx64/tools/auto_cc/include",
+                "/usr/include/c++/9/",
+                "${workspaceFolder}",
+                "${workspaceFolder}/Eigen",
+                "${workspaceFolder}/Vitis_Libraries",
+                "${workspaceFolder}/hlslib/include",
+                "${workspaceFolder}/Cranium/src"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/g++-9",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x86"
+        }
+    ],
+    "version": 4
+}
