@@ -1,8 +1,7 @@
 // defines for compilation behavior
-// #define TEST_MLP_CRANIUM
-#define TEST_TRAINING
+#define TEST_MLP_CRANIUM
+// #define TEST_TRAINING
 
-#include "KernelHelper.hpp"
 #include "Simulation.hpp"
 #include <vector>
 #include <algorithm>

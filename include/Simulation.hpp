@@ -19,12 +19,15 @@ using NN_OutputWeights = Eigen::Matrix<NN_DataType, NOutput, K, Eigen::RowMajor>
 using NN_InputVector = Eigen::Matrix<NN_DataType, KInput, 1, Eigen::ColMajor>;
 using NN_OutputVector = Eigen::Matrix<NN_DataType, NOutput, 1, Eigen::ColMajor>;
 
-void MultiLayerPerceptronReference(
-    const NN_InputWeights &inputWeights,
-    const NN_OutputWeights &outputWeights,
-    NN_Matrix **hiddenWeights,
-    const NN_InputVector &input,
-    NN_Vector **hiddenBias,
-    const NN_OutputVector &outputBias,
-    NN_OutputVector &output,
-    NN_Vector *tempResultsOut);
+void MLP(
+    NN_DataType *input,
+    NN_DataType *output,
+    const NN_DataType *axiWeightInput,
+    const NN_DataType *axiBiasInput,
+    NN_DataType bramLayerResults[NumberOfHidden * N + NOutput],
+    const unsigned int *numberInputs,
+    const unsigned int *numberOutputs,
+    const unsigned int *numberLayers,
+    const unsigned int *numberNeurons,
+    const unsigned int *loadParameters,
+    const unsigned int *exportLayers);

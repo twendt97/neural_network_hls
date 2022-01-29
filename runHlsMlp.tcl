@@ -19,10 +19,10 @@ open_project -reset proj_mlp
 source commonSettings.tcl
 
 # Add design files
-add_files -cflags "$defines $include_paths $compiler_flags" "MlpNew.cpp"
+add_files -cflags "$defines $include_paths $compiler_flags" "kernel/Mlp.cpp"
 
 # Add test bench & files
-add_files -tb -cflags "$defines $include_paths $compiler_flags" "NnTest.cpp ReferenceImplementation.cpp"
+add_files -tb -cflags "$defines $include_paths $compiler_flags" "test/Test.cpp"
 
 # Set the top-level function
 set_top MLP
@@ -36,7 +36,7 @@ create_clock -period 10
 config_interface -m_axi_addr64=0
 
 # Source x_hls.tcl to determine which steps to execute
-set hls_exec 3
+set hls_exec 0
 csim_design
 # Set any optimization directives
 # set_directive_pipeline loop_pipeline/LOOP_J
