@@ -1,9 +1,10 @@
 // defines for compilation behavior
 //#define TEST_MLP_CRANIUM
-// #define TEST_TRAINING
+#define TEST_TRAINING
 
 #include "Settings.hpp"
 #include "Simulation.hpp"
+#include "KernelHelper.hpp"
 #include <vector>
 #include <algorithm>
 #include <iostream>
@@ -120,32 +121,75 @@ int main(void)
 #endif
 
 #ifdef TEST_TRAINING
-    NN_Matrix testMatrix, weightGradientsReference, weightGradients;
-    NN_Vector testInputError, testInputCurResults, errorReference, error, testInputPrev;
+    NN_Matrix testWeights, weightGradientsReference, weightGradients;
+    NN_Vector testInputError, testInputCurResults, biasGradientReference, testInputPrev, biasGradient;
+    NN_OutputVector testOutput, testClasses, outputBiasGradient, outputBiasGradientReference;
+    NN_OutputWeights outputWeightGradient, outputWeightGradientReference;
 
-    testMatrix.setRandom();
+    testWeights.setRandom();
     testInputError.setRandom();
     testInputCurResults.setRandom();
     testInputPrev.setRandom();
+    testOutput.setRandom();
+    testClasses.setRandom();
 
-    computeError(N, K, testMatrix.data(), testInputError.data(), testInputCurResults.data(), error.data());
+    biasGradientReference = (testWeights.transpose() * testInputError).array() * testInputCurResults.unaryExpr(std::ref(uz_mlp::sigmoidDeriv<NN_DataType>)).array();
 
-    errorReference = (testMatrix.transpose() * testInputError).array() * testInputCurResults.unaryExpr(std::ref(sigmoidDeriv<NN_DataType>)).array();
-
-    for(unsigned int n = 0; n < N; n++)
+    for (unsigned int n = 0; n < N; n++)
     {
-        for(unsigned int k = 0; k < K; k++)
+        for (unsigned int k = 0; k < K; k++)
         {
-            weightGradientsReference.data()[n * K + k] = errorReference.data()[n] * testInputPrev.data()[k];
+            weightGradientsReference.data()[n * K + k] = biasGradientReference.data()[n] * testInputPrev.data()[k];
         }
     }
 
-    computeWeightGradient<NN_DataType, ParEntries>(N, K, error.data(), testInputPrev.data(), weightGradients.data());
+    uz_mlp::computeHiddenGradient<NN_DataType, ParEntries, logParEntries, streamDepth>(
+        N,
+        K,
+        testWeights.data(),
+        testInputError.data(),
+        testInputCurResults.data(),
+        testInputPrev.data(),
+        weightGradients.data(),
+        biasGradient.data());
 
-    if(weightGradientsReference.isApprox(weightGradients))
+    if (weightGradientsReference.isApprox(weightGradients) && biasGradientReference.isApprox(biasGradient))
         return_value = 0;
     else
+    {
         return_value = 1;
+        std::cout << "Hidden weight or bias gradients do not match" << std::endl << std::flush;
+    }
+
+    outputBiasGradientReference = testOutput - testClasses;
+
+    for (unsigned int n = 0; n < NOutput; n++)
+    {
+        for (unsigned int k = 0; k < K; k++)
+        {
+            outputWeightGradientReference.data()[n * K + k] = outputBiasGradientReference.data()[n] * testInputPrev.data()[k];
+        }
+    }
+
+    uz_mlp::computeOutputGradient<NN_DataType, ParEntries, streamDepth>(
+        NOutput,
+        K,
+        testOutput.data(),
+        testClasses.data(),
+        testInputPrev.data(),
+        outputWeightGradient.data(),
+        outputBiasGradient.data());
+
+    if (outputWeightGradientReference.isApprox(outputWeightGradient) 
+        && outputBiasGradientReference.isApprox(outputBiasGradient))
+        return_value = 0;
+    else
+    {
+        return_value = 1;
+        std::cout << "Output weight or bias gradients do not match" << std::endl << std::flush;
+    }
+
+
 
 #endif
 

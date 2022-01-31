@@ -25,6 +25,7 @@ constexpr unsigned ParEntriesInput = ParEntries;
 constexpr unsigned logParEntriesInput = logParEntries;
 constexpr unsigned ParEntriesOutput = 2;
 constexpr unsigned logParEntriesOutput = 1;
+constexpr unsigned streamDepth = 16;
 
 
 // Training

@@ -62,23 +62,6 @@ void BGD(
     currentResults = bramMlpResults;
     currentClasses = bramClasses;
 
-    {
-#pragma HLS DATAFLOW
-
-        xf::blas::readVec2Stream<NN_DataType, ParEntries>(
-            &currentResults[(*numberLayers - 1) * *numberNeurons],
-            *numberNeurons,
-            prevLayerOutputStream);
-
-        computeGradient<NN_DataType, ParEntries>(
-            *numberOutputs,
-            *numberNeurons,
-            errorStream,
-            prevLayerOutputStream,
-            &bramWeightGradient[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
-            &bramBiasGradient[*numberLayers * *numberNeurons]);
-    }
-
     // for (unsigned int layer = *numberLayers; layer > 0; layer--)
     // {
 
