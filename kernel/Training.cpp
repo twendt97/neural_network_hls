@@ -32,7 +32,6 @@ void BGD(
     NN_DataType bramMlpResults[maxSamples * (NumberOfHidden * N + NOutput + KInput)];
     NN_DataType bramError[NumberOfHidden * N + NOutput];
     NN_DataType *currentResults, *currentClasses;
-    hls::stream<typename xf::blas::WideType<NN_DataType, 1>::t_TypeInt> errorStream;
     hls::stream<typename xf::blas::WideType<NN_DataType, ParEntries>::t_TypeInt> prevLayerOutputStream;
 
     if (*loadParameters != 0)
@@ -65,14 +64,6 @@ void BGD(
 
     {
 #pragma HLS DATAFLOW
-        // error aka partial bias derivative of output layer
-        for (unsigned int i = 0; i < *numberOutputs; i++)
-        {
-            // bramError[*numberLayers * *numberNeurons + i] =
-            //     currentResults[*numberLayers * *numberNeurons + i] - currentClasses[i];
-            NN_DataType l_error = currentResults[*numberLayers * *numberNeurons + i] - currentClasses[i];
-            errorStream.write(l_error);
-        }
 
         xf::blas::readVec2Stream<NN_DataType, ParEntries>(
             &currentResults[(*numberLayers - 1) * *numberNeurons],

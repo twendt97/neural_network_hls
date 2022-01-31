@@ -66,10 +66,10 @@ namespace uz_mlp
 
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
     void ProcessLayer(
-        t_DataType *weights,
-        t_DataType *input,
-        t_DataType *bias,
-        t_DataType *output,
+        t_DataType *p_weights,
+        t_DataType *p_input,
+        t_DataType *p_bias,
+        t_DataType *p_output,
         unsigned int p_n,
         unsigned int p_k)
     {
@@ -83,20 +83,20 @@ namespace uz_mlp
         hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strMv("Matrix Vector Result");
         hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strBias("Bias");
 #pragma HLS DATAFLOW
-        xf::blas::gem2Stream<t_DataType, t_ParEntries>(p_n, p_k, weights, l_strWeights);
-        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, input, l_strInput);
-        xf::blas::readVec2Stream<t_DataType, 1>(bias, p_n, l_strBias);
+        xf::blas::gem2Stream<t_DataType, t_ParEntries>(p_n, p_k, p_weights, l_strWeights);
+        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, p_input, l_strInput);
+        xf::blas::readVec2Stream<t_DataType, 1>(p_bias, p_n, l_strBias);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_n, p_k, (t_DataType)1, l_strWeights, l_strInput, (t_DataType)1, l_strBias, l_strMv);
         ApplyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, uz_mlp::sigmoid<t_DataType>);
-        xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, output);
+        xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, p_output);
     }
 
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
     void InputLayer(
-        t_DataType *weights,
-        t_DataType *input,
-        t_DataType *bias,
-        t_DataType *output,
+        t_DataType *p_weights,
+        t_DataType *p_input,
+        t_DataType *p_bias,
+        t_DataType *p_output,
         unsigned int p_n,
         unsigned int p_k)
     {
@@ -110,20 +110,20 @@ namespace uz_mlp
         hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strMv("Matrix Vector Result");
         hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strBias("Bias");
 #pragma HLS DATAFLOW
-        xf::blas::gem2Stream<t_DataType, t_ParEntries>(p_n, p_k, weights, l_strWeights);
-        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, input, l_strInput);
-        xf::blas::readVec2Stream<t_DataType, 1>(bias, p_n, l_strBias);
+        xf::blas::gem2Stream<t_DataType, t_ParEntries>(p_n, p_k, p_weights, l_strWeights);
+        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, p_input, l_strInput);
+        xf::blas::readVec2Stream<t_DataType, 1>(p_bias, p_n, l_strBias);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_n, p_k, (t_DataType)1, l_strWeights, l_strInput, (t_DataType)1, l_strBias, l_strMv);
         ApplyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, uz_mlp::sigmoid<t_DataType>);
-        xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, output);
+        xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, p_output);
     }
 
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
     void OutputLayer(
-        t_DataType *weights,
-        t_DataType *input,
-        t_DataType *bias,
-        t_DataType *output,
+        t_DataType *p_weights,
+        t_DataType *p_input,
+        t_DataType *p_bias,
+        t_DataType *p_output,
         unsigned int p_n,
         unsigned int p_k)
     {
@@ -136,17 +136,17 @@ namespace uz_mlp
         hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strMv("Matrix Vector Result");
         hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strBias("Bias");
 #pragma HLS DATAFLOW
-        xf::blas::gem2Stream<t_DataType, t_ParEntries>(p_n, p_k, weights, l_strWeights);
-        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, input, l_strInput);
-        xf::blas::readVec2Stream<t_DataType, 1>(bias, p_n, l_strBias);
+        xf::blas::gem2Stream<t_DataType, t_ParEntries>(p_n, p_k, p_weights, l_strWeights);
+        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, p_input, l_strInput);
+        xf::blas::readVec2Stream<t_DataType, 1>(p_bias, p_n, l_strBias);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_n, p_k, (t_DataType)1, l_strWeights, l_strInput, (t_DataType)1, l_strBias, l_strMv);
-        xf::blas::writeStream2Vec<t_DataType, 1>(l_strMv, p_n, output);
+        xf::blas::writeStream2Vec<t_DataType, 1>(l_strMv, p_n, p_output);
     }
 
     template <typename t_DataType, unsigned int t_ParEntries>
     void CopyArray(
-        t_DataType *input,
-        t_DataType *output,
+        t_DataType *p_input,
+        t_DataType *p_output,
         unsigned int size)
     {
 #ifndef __SYNTHESIS__
@@ -160,7 +160,7 @@ namespace uz_mlp
             for (unsigned int j = 0; j < t_ParEntries; j++)
             {
 #pragma HLS UNROLL
-                output[i * t_ParEntries + j] = input[i * t_ParEntries + j];
+                p_output[i * t_ParEntries + j] = p_input[i * t_ParEntries + j];
             }
         }
     }
@@ -174,8 +174,8 @@ namespace uz_mlp
  * @tparam t_DataType the data type of the matrix entries
  * @tparam t_ParEntries number of parallelly processed entries in the matrix
  *
- * @param p_n number of rows in input matrix
- * @param p_k number of cols in input matrix
+ * @param p_n number of rows in p_input matrix
+ * @param p_k number of cols in p_input matrix
  * @param p_in a p_n x p_k matrix with on-chip row-major storage
  * @param p_out output stream
  */
@@ -214,7 +214,9 @@ namespace uz_mlp
  * @param p_out output stream
  * */
     template <typename t_DataType, unsigned int t_ParEntries>
-    void streamZero(unsigned int p_n, hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_out)
+    void streamZero(
+        unsigned int p_n,
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_out)
     {
 #ifndef __SYNTHESIS__
         assert((p_n % t_ParEntries) == 0);
@@ -276,13 +278,13 @@ namespace uz_mlp
  * 
  * */
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
-    void computeError(
+    void computeHiddenError(
         unsigned int p_n,
         unsigned int p_k,
-        t_DataType *weights,
-        t_DataType *inputError,
-        t_DataType *outputCurrentLayer,
-        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> &strOutputError)
+        t_DataType *p_weights,
+        t_DataType *p_inputError,
+        t_DataType *p_outputCurrentLayer,
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> &p_outputError)
     {
 #pragma HLS DATAFLOW
         hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> l_strWeights("Transposed weights");
@@ -293,14 +295,50 @@ namespace uz_mlp
         hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strActivDeriv("Activation Derivative");
         //hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_strOutputError("Final error");
 #pragma HLS DATAFLOW
-        uz_mlp::gem2StreamTranspose<t_DataType, t_ParEntries>(p_n, p_k, weights, l_strWeights);
-        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_k, p_n, inputError, l_strInputError);
+        uz_mlp::gem2StreamTranspose<t_DataType, t_ParEntries>(p_n, p_k, p_weights, l_strWeights);
+        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_k, p_n, p_inputError, l_strInputError);
         uz_mlp::streamZero<t_DataType, 1>(p_k, l_strZero);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_k, p_n, (t_DataType)1, l_strWeights, l_strInputError, (t_DataType)1, l_strZero, l_strMv);
-        xf::blas::readVec2Stream<t_DataType, 1>(outputCurrentLayer, p_k, l_strOutputCurLayer);
+        xf::blas::readVec2Stream<t_DataType, 1>(p_outputCurrentLayer, p_k, l_strOutputCurLayer);
         uz_mlp::ApplyFunction<t_DataType, 1>(l_strOutputCurLayer, l_strActivDeriv, p_k, uz_mlp::sigmoidDeriv<t_DataType>);
-        uz_mlp::hadamardProduct<t_DataType, 1>(p_k, l_strMv, l_strActivDeriv, strOutputError);
+        uz_mlp::hadamardProduct<t_DataType, 1>(p_k, l_strMv, l_strActivDeriv, p_outputError);
         //xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutputError, p_k, outputError);
+    }
+
+    /**
+     * @brief Compute the error of the outputs of the neural network which happens to be
+     *        p_results - p_classes
+     * 
+     * @tparam t_DataType Data type of the entries to be processed
+     * @tparam t_ParEntries Width of the output stream
+     * 
+     * @param p_n Number of entries in p_results and p_classes
+     * @param p_results Pointer to the results of the output layer
+     * @param p_classes Pointer to the the expected results of the output layer
+     * @param p_out Output stream
+     * */
+    template <typename t_DataType, unsigned int t_ParEntries>
+    void computeOutputError(
+        unsigned int p_n,
+        t_DataType *p_results,
+        t_DataType *p_classes,
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_out)
+    {
+#ifndef __SYNTHESIS__
+        assert((p_n % t_ParEntries) == 0);
+#endif
+        unsigned int l_parBlocks = p_n / t_ParEntries;
+        // error aka partial bias derivative of output layer
+        for (unsigned int i = 0; i < l_parBlocks; i++)
+        {
+#pragma HLS PIPELINE
+            xf::blas::WideType<t_DataType, t_ParEntries> l_error;
+            for (unsigned int j = 0; j < t_ParEntries; j++)
+            {
+                l_error[j] = p_results[i * t_ParEntries + j] - p_classes[i * t_ParEntries + j];
+            }
+            p_out.write(l_error);
+        }
     }
 
     /**
@@ -309,9 +347,9 @@ namespace uz_mlp
  * @tparam t_DataType Datatype of the vectors
  * @tparam t_ParEntries Number of parallel processed entries of the outputPrevLayer vector
  * 
- * @param p_n number of rows of the output matrix and number of entries in the currentError vector
+ * @param p_n number of rows of the output matrix and number of entries in the p_currentError vector
  * @param p_k number of cols of the output matrix and number of entries in the outputPrevLayer vector
- * @param currentError Error vector of the current layer
+ * @param p_currentError Error vector of the current layer
  * @param outputPrevLayer Output of the previous layer
  * 
  * */
@@ -319,28 +357,70 @@ namespace uz_mlp
     void computeGradient(
         unsigned int p_n,
         unsigned int p_k,
-        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> &currentError,
-        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &outputPrevLayer,
-        t_DataType *weightGradient,
-        t_DataType *biasGradient)
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> &p_currentError,
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_outputPrevLayer,
+        t_DataType *p_weightGradient,
+        t_DataType *p_biasGradient)
     {
 #ifndef __SYNTHESIS__
         assert((p_k % t_ParEntries) == 0);
 #endif
         for (unsigned int n = 0; n < p_n; n++)
         {
-            xf::blas::WideType<t_DataType, 1> l_currentError = currentError.read();
-            biasGradient[n] = l_currentError[0];
+            xf::blas::WideType<t_DataType, 1> l_currentError = p_currentError.read();
+            p_biasGradient[n] = l_currentError[0];
             for (unsigned int k = 0; k < p_k / t_ParEntries; k++)
             {
 #pragma HLS PIPELINE
-                xf::blas::WideType<t_DataType, t_ParEntries> l_outputPrevLayer = outputPrevLayer.read();
+                xf::blas::WideType<t_DataType, t_ParEntries> l_outputPrevLayer = p_outputPrevLayer.read();
                 for (unsigned int j = 0; j < t_ParEntries; j++)
                 {
-                    weightGradient[n * p_k + k * t_ParEntries + j] = l_outputPrevLayer[j] * l_currentError[0];
+                    p_weightGradient[n * p_k + k * t_ParEntries + j] = l_outputPrevLayer[j] * l_currentError[0];
                 }
             }
         }
     }
+
+    template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_StreamDepth>
+    void computeOutputGradient(
+        unsigned int p_n,
+        unsigned int p_k,
+        t_DataType *p_results,
+        t_DataType *p_classes,
+        t_DataType *p_outputPrevLayer,
+        t_DataType *p_weightGradient,
+        t_DataType *p_biasGradient)
+    {
+#pragma HLS DATAFLOW
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt, t_StreamDepth> l_outputErrorStream("Output error");
+#pragma HLS stream variable = l_outputErrorStream depth = t_StreamDepth
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt, t_StreamDepth> l_outputPrevLayer("Output previous layer");
+
+#pragma HLS DATAFLOW
+        uz_mlp::computeOutputError<t_DataType, 1>(
+            p_n,
+            p_results,
+            p_classes,
+            l_outputErrorStream
+        );
+
+        xf::blas::vec2GemStream<t_DataType, t_ParEntries>(
+            p_n,
+            p_k,
+            p_outputPrevLayer,
+            l_outputPrevLayer
+        );
+        uz_mlp::computeGradient<t_DataType, t_ParEntries>(
+            p_n,
+            p_k,
+            l_outputErrorStream,
+            l_outputPrevLayer,
+            p_weightGradient,
+            p_biasGradient
+        );
+    }
+
+    //template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_StreamDepth>
+    
 
 } // end namespace uz_mlp
