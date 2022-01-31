@@ -36,7 +36,7 @@ create_clock -period 10
 config_interface -m_axi_addr64=0
 
 # Source x_hls.tcl to determine which steps to execute
-set hls_exec 2
+set hls_exec 0
 csim_design
 # Set any optimization directives
 # set_directive_pipeline loop_pipeline/LOOP_J

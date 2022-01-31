@@ -30,7 +30,7 @@ void BGD(
     static NN_DataType bramBiasGradientAvg[NumberOfHidden * N + NOutput];
     NN_DataType bramClasses[maxSamples * NOutput];
     NN_DataType bramMlpResults[maxSamples * (NumberOfHidden * N + NOutput + KInput)];
-    NN_DataType bramError[NumberOfHidden * N + NOutput];
+    NN_DataType bramError[N];
     NN_DataType *currentResults, *currentClasses;
     hls::stream<typename xf::blas::WideType<NN_DataType, ParEntries>::t_TypeInt> prevLayerOutputStream;
 
@@ -62,26 +62,46 @@ void BGD(
     currentResults = bramMlpResults;
     currentClasses = bramClasses;
 
-    // for (unsigned int layer = *numberLayers; layer > 0; layer--)
-    // {
+    computeOutputGradient<NN_DataType, ParEntriesOutput, streamDepth>(
+        *numberOutputs,
+        *numberNeurons,
+        &currentResults[*numberLayers * *numberNeurons],
+        currentClasses,
+        &currentResults[(*numberLayers - 1) * *numberNeurons],
+        &bramWeightGradient[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
+        &bramBiasGradient[*numberLayers * *numberNeurons]);
 
-    //     NN_DataType *resultVector = network->layers[layer];
-    //     NN_DataType + *con = network->connections[layer - 1];
-    //     // calculate error term for hidden layer
-    //     int hiddenLayer = layer - 1;
-    //     transposeInto(network->connections[layer]->weights, WTi[hiddenLayer]);
-    //     multiplyInto(errori[layer + 1], WTi[hiddenLayer], errorLastTi[hiddenLayer]);
-    //     copyValuesInto(con->to->input, fprimei[hiddenLayer]);
-    //     float (*derivative)(float) = activationDerivative(con->to->activation);
-    //     for (j = 0; j < fprimei[hiddenLayer]->cols; j++)
-    //     {
-    //         fprimei[hiddenLayer]->data[j] = derivative(fprimei[hiddenLayer]->data[j]);
-    //     }
-    //     hadamardInto(errorLastTi[hiddenLayer], fprimei[hiddenLayer], errori[layer]);
+    copyArray<NN_DataType, ParEntriesOutput>(
+        &bramBiasGradient[*numberLayers * *numberNeurons],
+        bramError,
+        *numberOutputs);
 
-    //     // calculate dWi and dbi
-    //     transposeInto(con->from->input, inputTi[hiddenLayer]);
-    //     multiplyInto(inputTi[hiddenLayer], errori[layer], dWi[layer - 1]);
-    //     copyValuesInto(errori[layer], dbi[layer - 1]);
-    // }
+    for (int layer = *numberLayers - 1; layer > 0; layer--)
+    {
+        unsigned int p_n = layer < *numberLayers - 1 ? *numberNeurons : *numberOutputs;
+        computeHiddenGradient<NN_DataType, ParEntries, logParEntries, streamDepth>(
+            p_n,
+            *numberNeurons,
+            &bramWeight[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
+            bramError,
+            &currentResults[layer * *numberNeurons],
+            &currentResults[(layer - 1) * *numberNeurons],
+            &bramWeightGradient[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
+            &bramBiasGradient[layer * *numberNeurons]);
+
+        copyArray<NN_DataType, ParEntriesOutput>(
+            &bramBiasGradient[layer * *numberNeurons],
+            bramError,
+            *numberNeurons);
+    }
+
+    computeHiddenGradient<NN_DataType, ParEntriesInput, logParEntriesInput, streamDepth>(
+        *numberNeurons,
+        *numberInputs,
+        bramWeight,
+        bramError,
+        &currentResults[*numberInputs],
+        currentResults,
+        bramWeightGradient,
+        bramBiasGradient);
 }

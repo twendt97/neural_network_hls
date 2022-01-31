@@ -38,7 +38,7 @@ namespace uz_mlp
     }
 
     template <typename t_DataType, unsigned int t_ParEntries>
-    void ApplyFunction(
+    void applyFunction(
         hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_in,
         hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_out,
         unsigned int p_n,
@@ -65,7 +65,7 @@ namespace uz_mlp
     // Layer processing
 
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
-    void ProcessLayer(
+    void processLayer(
         t_DataType *p_weights,
         t_DataType *p_input,
         t_DataType *p_bias,
@@ -87,12 +87,12 @@ namespace uz_mlp
         xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, p_input, l_strInput);
         xf::blas::readVec2Stream<t_DataType, 1>(p_bias, p_n, l_strBias);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_n, p_k, (t_DataType)1, l_strWeights, l_strInput, (t_DataType)1, l_strBias, l_strMv);
-        ApplyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, uz_mlp::sigmoid<t_DataType>);
+        applyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, uz_mlp::sigmoid<t_DataType>);
         xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, p_output);
     }
 
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
-    void InputLayer(
+    void inputLayer(
         t_DataType *p_weights,
         t_DataType *p_input,
         t_DataType *p_bias,
@@ -114,12 +114,12 @@ namespace uz_mlp
         xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, p_input, l_strInput);
         xf::blas::readVec2Stream<t_DataType, 1>(p_bias, p_n, l_strBias);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_n, p_k, (t_DataType)1, l_strWeights, l_strInput, (t_DataType)1, l_strBias, l_strMv);
-        ApplyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, uz_mlp::sigmoid<t_DataType>);
+        applyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, uz_mlp::sigmoid<t_DataType>);
         xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, p_output);
     }
 
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
-    void OutputLayer(
+    void outputLayer(
         t_DataType *p_weights,
         t_DataType *p_input,
         t_DataType *p_bias,
@@ -144,7 +144,7 @@ namespace uz_mlp
     }
 
     template <typename t_DataType, unsigned int t_ParEntries>
-    void CopyArray(
+    void copyArray(
         t_DataType *p_input,
         t_DataType *p_output,
         unsigned int size)
@@ -272,9 +272,20 @@ namespace uz_mlp
     }
 
     /**
- * p_n = number of rows in weight matrix and number of rows in error vector of latter layer
- * p_k = number of cols in weight matrix, number of rows of the output error vector and number
- *       of rows in output vector of current layer
+ * @brief Compute the error of the results given in p_outputCurrentLayer
+ * 
+ * @tparam t_DataType the data type of the vector entries
+ * @tparam t_ParEntries number of parallelly processed entries
+ * @tparam t_logParEntries log2 of t_ParEntries
+ * 
+ * 
+ * @param p_n Number of rows in weight matrix and number of rows in error vector of latter layer
+ * @param p_k Number of cols in weight matrix, number of rows of the output error vector and number
+ *            of rows in output vector of current layer
+ * @param p_weights Weight matrix between the current layer and the latter layer
+ * @param p_latterError Error of the latter layer
+ * @param p_outputCurrentLayer Output of the current layer
+ * @param p_outputError Stream with the values of the error vector
  * 
  * */
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries>
@@ -300,7 +311,7 @@ namespace uz_mlp
         uz_mlp::streamZero<t_DataType, 1>(p_k, l_strZero);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_k, p_n, (t_DataType)1, l_strWeights, l_strLatterError, (t_DataType)1, l_strZero, l_strMv);
         xf::blas::readVec2Stream<t_DataType, 1>(p_outputCurrentLayer, p_k, l_strOutputCurLayer);
-        uz_mlp::ApplyFunction<t_DataType, 1>(l_strOutputCurLayer, l_strActivDeriv, p_k, uz_mlp::sigmoidDeriv<t_DataType>);
+        uz_mlp::applyFunction<t_DataType, 1>(l_strOutputCurLayer, l_strActivDeriv, p_k, uz_mlp::sigmoidDeriv<t_DataType>);
         uz_mlp::hadamardProduct<t_DataType, 1>(p_k, l_strMv, l_strActivDeriv, p_outputError);
         //xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutputError, p_k, outputError);
     }
@@ -432,6 +443,26 @@ namespace uz_mlp
             p_biasGradient);
     }
 
+ /**
+ * @brief Compute the weight and bias gradient for the matrixes between p_outputCurrentLayer and the latter layer
+ * 
+ * @tparam t_DataType the data type of the vector entries
+ * @tparam t_ParEntries number of parallelly processed entries
+ * @tparam t_logParEntries log2 of t_ParEntries
+ * @tparam t_StreamDepth Depth of the FIFO between the error and the gradient compuatation engine
+ * 
+ * 
+ * @param p_n Number of rows in weight matrix and number of rows in error vector of latter layer
+ * @param p_k Number of cols in weight matrix, number of rows of the output error vector and number
+ *            of rows in output vector of current layer
+ * @param p_weights Weight matrix between the current layer and the latter layer
+ * @param p_latterError Error of the latter layer
+ * @param p_outputCurrentLayer Output of the current layer
+ * @param p_outputPrevLayer Output of the previous layer
+ * @param p_weightGradient Matrix with gradients of the weights
+ * @param p_biasGradient Vector with the gradients of the bias
+ * 
+ * */
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries, unsigned int t_StreamDepth = 2>
     void computeHiddenGradient(
         unsigned int p_n,

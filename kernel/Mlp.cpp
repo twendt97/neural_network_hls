@@ -58,7 +58,7 @@ void MLP(
 
     memcpy(inputData, input, *numberInputs * sizeof(NN_DataType));
 
-    InputLayer<NN_DataType, ParEntriesInput, logParEntriesInput>(
+    inputLayer<NN_DataType, ParEntriesInput, logParEntriesInput>(
         bramWeight,
         inputData,
         bramBias,
@@ -68,14 +68,14 @@ void MLP(
 
     // only write to bramLayerResults to get a write only one port interface and not dual port
     if (*exportLayers != 0)
-        CopyArray<NN_DataType, 1>(layerBuffer0, bramLayerResults, *numberNeurons);
+        copyArray<NN_DataType, 1>(layerBuffer0, bramLayerResults, *numberNeurons);
 
-    CopyArray<NN_DataType, ParEntries>(layerBuffer0, layerBuffer1, *numberNeurons);
+    copyArray<NN_DataType, ParEntries>(layerBuffer0, layerBuffer1, *numberNeurons);
 
 HIDDEN:
     for (unsigned int i = 0; i < *numberLayers - 1; i++)
     {
-        ProcessLayer<NN_DataType, ParEntries, logParEntries>(
+        processLayer<NN_DataType, ParEntries, logParEntries>(
             &bramWeight[(*numberInputs + i * *numberNeurons) * *numberNeurons],
             layerBuffer1,
             &bramBias[(i + 1) * *numberNeurons],
@@ -84,11 +84,11 @@ HIDDEN:
             *numberNeurons);
 
         if (*exportLayers != 0)
-            CopyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[(i + 1) * *numberNeurons], *numberNeurons);
+            copyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[(i + 1) * *numberNeurons], *numberNeurons);
 
-        CopyArray<NN_DataType, ParEntries>(layerBuffer0, layerBuffer1, *numberNeurons);
+        copyArray<NN_DataType, ParEntries>(layerBuffer0, layerBuffer1, *numberNeurons);
     }
-    OutputLayer<NN_DataType, ParEntriesOutput, logParEntriesOutput>(
+    outputLayer<NN_DataType, ParEntriesOutput, logParEntriesOutput>(
         &bramWeight[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
         layerBuffer1,
         &bramBias[*numberLayers * *numberNeurons],
@@ -97,7 +97,7 @@ HIDDEN:
         *numberNeurons);
 
     if (*exportLayers != 0)
-        CopyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[*numberLayers * *numberNeurons], *numberOutputs);
+        copyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[*numberLayers * *numberNeurons], *numberOutputs);
 
     memcpy(output, layerBuffer0, *numberOutputs * sizeof(NN_DataType));
 }
