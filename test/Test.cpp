@@ -272,36 +272,3 @@ void extractCraniumWeights(
         outputBiasMemory[i] = net->connections[NumberOfHidden]->bias->data[i];
     }
 }
-
-// Union hack test for data type conversion
-// union {
-//     float f;
-//     unsigned int i;
-// } u1, u2;
-
-// u1.i = 16;
-// u2.f = u1.f;
-
-// std::cout << u2.f << std::endl;
-// std::cout << u2.i << std::endl;
-
-//MultAdd(weights.data(), inputs.data(), bias.data(), result.data());
-// MatrixVectorVectorizedDivided(
-//     reinterpret_cast<Vec_t const *>(weights.data()),
-//     inputs.data(),
-//     reinterpret_cast<Vec_t const *>(bias.data()),
-//     reinterpret_cast<Vec_t *>(result.data()));
-//MatrixVectorVectorizedTree(weights.data(), inputs.data(), bias.data(), result.data());
-
-// size_t hiddenSizes[cranNumHiddenLayers];
-// Activation hiddenActivations[cranNumHiddenLayers];
-// Network * craniumNetwork = createNetwork(cranFeatures, cranNumHiddenLayers,
-//     createArrayHiddenSizes(hiddenSizes), createArrayHiddenActivations(hiddenActivations),
-//     cranOutputs, &linear);
-
-// Eigen::Matrix<float, cranFeatures, 1, Eigen::ColMajor> cranEigenInput;
-// cranEigenInput.setRandom();
-// Matrix *cranInput = createMatrix(1, cranFeatures, cranEigenInput.data());
-
-// forwardPass(craniumNetwork, cranInput);
-// Matrix * outputData = getOuput(craniumNetwork);

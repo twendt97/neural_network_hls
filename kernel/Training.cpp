@@ -21,12 +21,11 @@ void BGD(
     const unsigned int *numberNeurons,
     const unsigned int *numberSamples,
     const unsigned int *loadParameters,
-    const float *learningRate)
+    const unsigned int *batchSize,
+    const NN_DataType *learningRate)
 {
     static NN_DataType bramWeight[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];
     static NN_DataType bramBias[NumberOfHidden * N + NOutput];
-    static NN_DataType bramWeightGradient[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];
-    static NN_DataType bramBiasGradient[NumberOfHidden * N + NOutput];
     static NN_DataType bramWeightGradientAvg[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];
     static NN_DataType bramBiasGradientAvg[NumberOfHidden * N + NOutput];
     NN_DataType bramClasses[maxSamples * NOutput];
@@ -37,18 +36,18 @@ void BGD(
 
     if (*loadParameters != 0)
     {
-        unsigned int valuesToCopy;
+        unsigned int valuesToLoad;
         // weights
-        valuesToCopy = *numberInputs * *numberNeurons;
-        valuesToCopy += (*numberLayers - 1) * *numberNeurons * *numberNeurons;
-        valuesToCopy += *numberOutputs * *numberNeurons;
+        valuesToLoad = *numberInputs * *numberNeurons;
+        valuesToLoad += (*numberLayers - 1) * *numberNeurons * *numberNeurons;
+        valuesToLoad += *numberOutputs * *numberNeurons;
 
-        memcpy(bramWeight, axiWeightInput, valuesToCopy * sizeof(NN_DataType));
+        memcpy(bramWeight, axiWeightInput, valuesToLoad * sizeof(NN_DataType));
 
         // biases
-        valuesToCopy = *numberLayers * *numberNeurons;
-        valuesToCopy += *numberOutputs;
-        memcpy(bramBias, axiBiasInput, valuesToCopy * sizeof(NN_DataType));
+        valuesToLoad = *numberLayers * *numberNeurons;
+        valuesToLoad += *numberOutputs;
+        memcpy(bramBias, axiBiasInput, valuesToLoad * sizeof(NN_DataType));
     }
 
     // copy volatile parameters
@@ -60,55 +59,82 @@ void BGD(
 
     // calculate each iteration of backpropagation
 
-    currentResults = bramMlpResults;
-    currentClasses = bramClasses;
-
-    computeOutputGradient<NN_DataType, ParEntriesOutput, streamDepth>(
-        *numberOutputs,
-        *numberNeurons,
-        &currentResults[*numberLayers * *numberNeurons],
-        currentClasses,
-        &currentResults[(*numberLayers - 1) * *numberNeurons],
-        &bramWeightGradient[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
-        &bramBiasGradient[*numberLayers * *numberNeurons],
-        bramError,
-        false);
-
-    copyArray<NN_DataType, ParEntriesOutput>(
-        &bramBiasGradient[*numberLayers * *numberNeurons],
-        bramError,
-        *numberOutputs);
-
-    for (int layer = *numberLayers - 1; layer > 0; layer--)
+    for (unsigned int i = 0; i < *batchSize; i++)
     {
-        unsigned int p_n = layer < *numberLayers - 1 ? *numberNeurons : *numberOutputs;
-        computeHiddenGradient<NN_DataType, ParEntries, logParEntries, streamDepth>(
-            p_n,
+
+        currentResults = bramMlpResults;
+        currentClasses = bramClasses;
+
+        computeOutputGradient<NN_DataType, ParEntriesOutput, streamDepth>(
+            *numberOutputs,
             *numberNeurons,
-            &bramWeight[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
-            bramError,
-            &currentResults[layer * *numberNeurons],
-            &currentResults[(layer - 1) * *numberNeurons],
-            &bramWeightGradient[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
-            &bramBiasGradient[layer * *numberNeurons],
+            &currentResults[*numberLayers * *numberNeurons],
+            currentClasses,
+            &currentResults[(*numberLayers - 1) * *numberNeurons],
+            &bramWeightGradientAvg[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
+            &bramBiasGradientAvg[*numberLayers * *numberNeurons],
             bramError,
             false);
 
         copyArray<NN_DataType, ParEntriesOutput>(
-            &bramBiasGradient[layer * *numberNeurons],
+            &bramBiasGradientAvg[*numberLayers * *numberNeurons],
             bramError,
-            *numberNeurons);
+            *numberOutputs);
+
+        for (int layer = *numberLayers - 1; layer > 0; layer--)
+        {
+            unsigned int p_n = layer < *numberLayers - 1 ? *numberNeurons : *numberOutputs;
+            computeHiddenGradient<NN_DataType, ParEntries, logParEntries, streamDepth>(
+                p_n,
+                *numberNeurons,
+                &bramWeight[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
+                bramError,
+                &currentResults[layer * *numberNeurons],
+                &currentResults[(layer - 1) * *numberNeurons],
+                &bramWeightGradientAvg[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
+                &bramBiasGradientAvg[layer * *numberNeurons],
+                bramError,
+                false);
+
+            copyArray<NN_DataType, ParEntriesOutput>(
+                &bramBiasGradientAvg[layer * *numberNeurons],
+                bramError,
+                *numberNeurons);
+        }
+
+        computeHiddenGradient<NN_DataType, ParEntriesInput, logParEntriesInput, streamDepth>(
+            *numberNeurons,
+            *numberInputs,
+            bramWeight,
+            bramError,
+            &currentResults[*numberInputs],
+            currentResults,
+            bramWeightGradientAvg,
+            bramBiasGradientAvg,
+            bramError,
+            false);
     }
 
-    computeHiddenGradient<NN_DataType, ParEntriesInput, logParEntriesInput, streamDepth>(
-        *numberNeurons,
-        *numberInputs,
+    updateParameter<NN_DataType, ParEntries>(
         bramWeight,
-        bramError,
-        &currentResults[*numberInputs],
-        currentResults,
-        bramWeightGradient,
-        bramBiasGradient,
-        bramError,
-        false);
+        bramBias,
+        bramWeightGradientAvg,
+        bramBiasGradientAvg,
+        *learningRate,
+        (NN_DataType)*batchSize,
+        (*numberInputs + (*numberLayers - 1) * *numberNeurons + *numberOutputs) * *numberNeurons,
+        *numberLayers * *numberNeurons + *numberOutputs);
+
+    unsigned int valuesToStore;
+    // weights
+    valuesToStore = *numberInputs * *numberNeurons;
+    valuesToStore += (*numberLayers - 1) * *numberNeurons * *numberNeurons;
+    valuesToStore += *numberOutputs * *numberNeurons;
+
+    memcpy(axiWeightOutput, bramWeight, valuesToStore * sizeof(NN_DataType));
+
+    // biases
+    valuesToStore = *numberLayers * *numberNeurons;
+    valuesToStore += *numberOutputs;
+    memcpy(axiBiasOutput, bramBias, valuesToStore * sizeof(NN_DataType));
 }

@@ -397,17 +397,30 @@ namespace uz_mlp
         }
     }
 
+    /**
+ * @brief Compute p_accumulate += p_values
+ * 
+ * @tparam t_DataType Datatype of the vectors
+ * @tparam t_ParEntries Number of parallel processed entries
+ * 
+ * @param p_accumulator Array from which the values are read from and written to
+ * @param p_values Input stream with values that are added to p_accumulator
+ * @param p_size Size of p_accumulator and number of values fed by p_values
+ * @param p_initZero If true p_accumulator is initialized with zeroes otherwise the above mentioned
+ *        computation is performed
+ * 
+ * */
     template <typename t_DataType, unsigned int t_ParEntries>
     void accumulate(
         t_DataType *p_accumulator,
         hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_values,
-        unsigned int size,
+        unsigned int p_size,
         bool p_initZero)
     {
 #ifndef __SYNTHESIS__
-        assert((size % t_ParEntries) == 0);
+        assert((p_size % t_ParEntries) == 0);
 #endif
-        unsigned int l_parBlocks = size / t_ParEntries;
+        unsigned int l_parBlocks = p_size / t_ParEntries;
         for (unsigned int i = 0; i < l_parBlocks; i++)
         {
 #pragma HLS PIPELINE
@@ -565,5 +578,56 @@ namespace uz_mlp
             p_n,
             p_initZero);
     }
+
+    template <typename t_DataType, unsigned int t_ParEntries>
+    void updateParameter(
+        t_DataType *p_weights,
+        t_DataType *p_bias,
+        t_DataType *p_weightGradient,
+        t_DataType *p_biasGradient,
+        t_DataType p_learningRate,
+        t_DataType p_batchSize,
+        unsigned int p_weightSize,
+        unsigned int p_biasSize
+    )
+    {
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> l_weightGradient, l_weightGradientScal;
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> l_biasGradient, l_biasGradientScal;
+
+        t_DataType l_multiplicator = p_learningRate / p_batchSize;
+        l_multiplicator *= (t_DataType)-1;
+
+        xf::blas::readVec2Stream(p_weightGradient, p_weightSize, l_weightGradient);
+        xf::blas::scal<t_DataType, t_ParEntries>(
+            p_weightSize,
+            l_multiplicator,
+            l_weightGradient,
+            l_weightGradientScal
+        );
+
+        xf::blas::readVec2Stream(p_biasGradient, p_biasSize, l_biasGradient);
+        xf::blas::scal<t_DataType, t_ParEntries>(
+            p_weightSize,
+            l_multiplicator,
+            l_biasGradient,
+            l_biasGradientScal
+        );
+
+        uz_mlp::accumulate<t_DataType, t_ParEntries>(
+            p_weights,
+            l_weightGradientScal,
+            p_weightSize,
+            false
+        );
+
+        uz_mlp::accumulate<t_DataType, t_ParEntries>(
+            p_bias,
+            l_biasGradientScal,
+            p_biasSize,
+            false
+        );
+
+    }
+
 
 } // end namespace uz_mlp
