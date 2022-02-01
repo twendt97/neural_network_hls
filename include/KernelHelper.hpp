@@ -358,9 +358,9 @@ namespace uz_mlp
  * @tparam t_DataType Datatype of the vectors
  * @tparam t_ParEntries Number of parallel processed entries of the outputPrevLayer vector
  * 
- * @param p_n number of rows of the output matrix and number of entries in the p_currentError vector
+ * @param p_n number of rows of the output matrix and number of entries in the p_currentErrorInput vector
  * @param p_k number of cols of the output matrix and number of entries in the outputPrevLayer vector
- * @param p_currentError Error vector of the current layer
+ * @param p_currentErrorInput Error vector of the current layer
  * @param outputPrevLayer Output of the previous layer
  * 
  * */
@@ -368,26 +368,54 @@ namespace uz_mlp
     void computeGradient(
         unsigned int p_n,
         unsigned int p_k,
-        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> &p_currentError,
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> &p_currentErrorInput,
         hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_outputPrevLayer,
-        t_DataType *p_weightGradient,
-        t_DataType *p_biasGradient)
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_weightGradient,
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> &p_biasGradient,
+        t_DataType *p_currentErrorOutput)
     {
 #ifndef __SYNTHESIS__
         assert((p_k % t_ParEntries) == 0);
 #endif
         for (unsigned int n = 0; n < p_n; n++)
         {
-            xf::blas::WideType<t_DataType, 1> l_currentError = p_currentError.read();
-            p_biasGradient[n] = l_currentError[0];
+            xf::blas::WideType<t_DataType, 1> l_currentError = p_currentErrorInput.read();
+            p_currentErrorOutput[n] = l_currentError[0];
+            p_biasGradient.write(l_currentError);
             for (unsigned int k = 0; k < p_k / t_ParEntries; k++)
             {
 #pragma HLS PIPELINE
                 xf::blas::WideType<t_DataType, t_ParEntries> l_outputPrevLayer = p_outputPrevLayer.read();
+                xf::blas::WideType<t_DataType, t_ParEntries> l_weightGradient;
                 for (unsigned int j = 0; j < t_ParEntries; j++)
                 {
-                    p_weightGradient[n * p_k + k * t_ParEntries + j] = l_outputPrevLayer[j] * l_currentError[0];
+                    l_weightGradient[j] = l_outputPrevLayer[j] * l_currentError[0];
+                    //p_weightGradient[n * p_k + k * t_ParEntries + j] = l_outputPrevLayer[j] * l_currentError[0];
                 }
+                p_weightGradient.write(l_weightGradient);
+            }
+        }
+    }
+
+    template <typename t_DataType, unsigned int t_ParEntries>
+    void accumulate(
+        t_DataType *p_accumulator,
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> &p_values,
+        unsigned int size,
+        bool p_initZero)
+    {
+#ifndef __SYNTHESIS__
+        assert((size % t_ParEntries) == 0);
+#endif
+        unsigned int l_parBlocks = size / t_ParEntries;
+        for (unsigned int i = 0; i < l_parBlocks; i++)
+        {
+#pragma HLS PIPELINE
+            xf::blas::WideType<t_DataType, t_ParEntries> l_values = p_values.read();
+            for (unsigned int j = 0; j < t_ParEntries; j++)
+            {
+                t_DataType l_accumulator = p_initZero == true ? (t_DataType)0 : p_accumulator[i * t_ParEntries + j];
+                p_accumulator[i * t_ParEntries + j] = l_accumulator + l_values[j];
             }
         }
     }
@@ -399,12 +427,12 @@ namespace uz_mlp
  * @tparam t_ParEntries Number of parallel processed entries of the outputPrevLayer vector
  * @tparam t_StreamDepth Depth of the FIFO between the error and the gradient compuatation engine
  * 
- * @param p_n number of rows of p_weightGradient and number of entries in the output vector of the MLP and
- *            number of entries in p_biasGradient
- * @param p_k number of cols of p_weightGradient, number of entries in the p_outputPrevLayer vector
+ * @param p_n number of rows of p_weightGradientAvg and number of entries in the output vector of the MLP and
+ *            number of entries in p_biasGradientAvg
+ * @param p_k number of cols of p_weightGradientAvg, number of entries in the p_outputPrevLayer vector
  * @param p_outputPrevLayer Output of the last hidden layer
- * @param p_weightGradient Matrix with gradients of the weights
- * @param p_biasGradient Vector with the gradients of the bias
+ * @param p_weightGradientAvg Matrix with gradients of the weights
+ * @param p_biasGradientAvg Vector with the gradients of the bias
  * 
  * */
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_StreamDepth>
@@ -414,13 +442,17 @@ namespace uz_mlp
         t_DataType *p_results,
         t_DataType *p_classes,
         t_DataType *p_outputPrevLayer,
-        t_DataType *p_weightGradient,
-        t_DataType *p_biasGradient)
+        t_DataType *p_weightGradientAvg,
+        t_DataType *p_biasGradientAvg,
+        t_DataType *p_error,
+        bool p_initZero)
     {
 #pragma HLS DATAFLOW
         hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt, t_StreamDepth> l_outputErrorStream;
 #pragma HLS stream variable = l_outputErrorStream depth = t_StreamDepth
         hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> l_outputPrevLayer;
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> l_weightGradient;
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_biasGradient;
 
 #pragma HLS DATAFLOW
         uz_mlp::computeOutputError<t_DataType, 1>(
@@ -434,16 +466,30 @@ namespace uz_mlp
             p_k,
             p_outputPrevLayer,
             l_outputPrevLayer);
+
         uz_mlp::computeGradient<t_DataType, t_ParEntries>(
             p_n,
             p_k,
             l_outputErrorStream,
             l_outputPrevLayer,
-            p_weightGradient,
-            p_biasGradient);
+            l_weightGradient,
+            l_biasGradient,
+            p_error);
+
+        uz_mlp::accumulate<t_DataType, t_ParEntries>(
+            p_weightGradientAvg,
+            l_weightGradient,
+            p_n * p_k,
+            p_initZero);
+
+        uz_mlp::accumulate<t_DataType, 1>(
+            p_biasGradientAvg,
+            l_biasGradient,
+            p_n,
+            p_initZero);
     }
 
- /**
+    /**
  * @brief Compute the weight and bias gradient for the matrixes between p_outputCurrentLayer and the latter layer
  * 
  * @tparam t_DataType the data type of the vector entries
@@ -459,8 +505,8 @@ namespace uz_mlp
  * @param p_latterError Error of the latter layer
  * @param p_outputCurrentLayer Output of the current layer
  * @param p_outputPrevLayer Output of the previous layer
- * @param p_weightGradient Matrix with gradients of the weights
- * @param p_biasGradient Vector with the gradients of the bias
+ * @param p_weightGradientAvg Matrix with gradients of the weights
+ * @param p_biasGradientAvg Vector with the gradients of the bias
  * 
  * */
     template <typename t_DataType, unsigned int t_ParEntries, unsigned int t_logParEntries, unsigned int t_StreamDepth = 2>
@@ -471,13 +517,17 @@ namespace uz_mlp
         t_DataType *p_latterError,
         t_DataType *p_outputCurrentLayer,
         t_DataType *p_outputPrevLayer,
-        t_DataType *p_weightGradient,
-        t_DataType *p_biasGradient)
+        t_DataType *p_weightGradientAvg,
+        t_DataType *p_biasGradientAvg,
+        t_DataType *p_error,
+        bool p_initZero)
     {
 #pragma HLS DATAFLOW
         hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt, t_StreamDepth> l_errorStream;
 #pragma HLS stream variable = l_outputErrorStream depth = t_StreamDepth
         hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> l_outputPrevLayer;
+        hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> l_weightGradient;
+        hls::stream<typename xf::blas::WideType<t_DataType, 1>::t_TypeInt> l_biasGradient;
 
 #pragma HLS DATAFLOW
         uz_mlp::computeHiddenError<t_DataType, t_ParEntries, t_logParEntries>(
@@ -499,8 +549,21 @@ namespace uz_mlp
             p_k,
             l_errorStream,
             l_outputPrevLayer,
-            p_weightGradient,
-            p_biasGradient);
+            l_weightGradient,
+            l_biasGradient,
+            p_error);
+
+        uz_mlp::accumulate<t_DataType, t_ParEntries>(
+            p_weightGradientAvg,
+            l_weightGradient,
+            p_n * p_k,
+            p_initZero);
+
+        uz_mlp::accumulate<t_DataType, 1>(
+            p_biasGradientAvg,
+            l_biasGradient,
+            p_n,
+            p_initZero);
     }
 
 } // end namespace uz_mlp

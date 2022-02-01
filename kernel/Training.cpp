@@ -20,7 +20,8 @@ void BGD(
     const unsigned int *numberLayers,
     const unsigned int *numberNeurons,
     const unsigned int *numberSamples,
-    const unsigned int *loadParameters)
+    const unsigned int *loadParameters,
+    const float *learningRate)
 {
     static NN_DataType bramWeight[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];
     static NN_DataType bramBias[NumberOfHidden * N + NOutput];
@@ -69,7 +70,9 @@ void BGD(
         currentClasses,
         &currentResults[(*numberLayers - 1) * *numberNeurons],
         &bramWeightGradient[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
-        &bramBiasGradient[*numberLayers * *numberNeurons]);
+        &bramBiasGradient[*numberLayers * *numberNeurons],
+        bramError,
+        false);
 
     copyArray<NN_DataType, ParEntriesOutput>(
         &bramBiasGradient[*numberLayers * *numberNeurons],
@@ -87,7 +90,9 @@ void BGD(
             &currentResults[layer * *numberNeurons],
             &currentResults[(layer - 1) * *numberNeurons],
             &bramWeightGradient[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
-            &bramBiasGradient[layer * *numberNeurons]);
+            &bramBiasGradient[layer * *numberNeurons],
+            bramError,
+            false);
 
         copyArray<NN_DataType, ParEntriesOutput>(
             &bramBiasGradient[layer * *numberNeurons],
@@ -103,5 +108,7 @@ void BGD(
         &currentResults[*numberInputs],
         currentResults,
         bramWeightGradient,
-        bramBiasGradient);
+        bramBiasGradient,
+        bramError,
+        false);
 }
