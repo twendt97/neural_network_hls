@@ -30,7 +30,7 @@ void BGD(
     static NN_DataType bramBiasGradientAvg[NumberOfHidden * N + NOutput];
     NN_DataType bramClasses[maxSamples * NOutput];
     NN_DataType bramMlpResults[maxSamples * (NumberOfHidden * N + NOutput + KInput)];
-    NN_DataType bramError[N];
+    NN_DataType bramError0[N], bramError1[N];
     NN_DataType *currentResults, *currentClasses;
     hls::stream<typename xf::blas::WideType<NN_DataType, ParEntries>::t_TypeInt> prevLayerOutputStream;
 
@@ -62,8 +62,9 @@ void BGD(
     for (unsigned int i = 0; i < *batchSize; i++)
     {
 
-        currentResults = bramMlpResults;
-        currentClasses = bramClasses;
+        currentResults = &bramMlpResults[i * (*numberInputs + *numberNeurons * *numberLayers + *numberOutputs)];
+        currentClasses = &bramClasses[i * *numberOutputs];
+        bool initZero = (i == 0);
 
         computeOutputGradient<NN_DataType, ParEntriesOutput, streamDepth>(
             *numberOutputs,
@@ -73,12 +74,12 @@ void BGD(
             &currentResults[(*numberLayers - 1) * *numberNeurons],
             &bramWeightGradientAvg[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
             &bramBiasGradientAvg[*numberLayers * *numberNeurons],
-            bramError,
-            false);
+            bramError0,
+            initZero);
 
         copyArray<NN_DataType, ParEntriesOutput>(
-            &bramBiasGradientAvg[*numberLayers * *numberNeurons],
-            bramError,
+            bramError0,
+            bramError1,
             *numberOutputs);
 
         for (int layer = *numberLayers - 1; layer > 0; layer--)
@@ -88,17 +89,17 @@ void BGD(
                 p_n,
                 *numberNeurons,
                 &bramWeight[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
-                bramError,
+                bramError1,
                 &currentResults[layer * *numberNeurons],
                 &currentResults[(layer - 1) * *numberNeurons],
                 &bramWeightGradientAvg[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
                 &bramBiasGradientAvg[layer * *numberNeurons],
-                bramError,
-                false);
+                bramError0,
+                initZero);
 
             copyArray<NN_DataType, ParEntriesOutput>(
-                &bramBiasGradientAvg[layer * *numberNeurons],
-                bramError,
+                bramError1,
+                bramError0,
                 *numberNeurons);
         }
 
@@ -106,13 +107,13 @@ void BGD(
             *numberNeurons,
             *numberInputs,
             bramWeight,
-            bramError,
+            bramError1,
             &currentResults[*numberInputs],
             currentResults,
             bramWeightGradientAvg,
             bramBiasGradientAvg,
-            bramError,
-            false);
+            bramError0,
+            initZero);
     }
 
     updateParameter<NN_DataType, ParEntries>(

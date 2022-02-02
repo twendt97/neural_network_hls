@@ -13,7 +13,7 @@ void MLP(
     NN_DataType *output,
     const NN_DataType *axiWeightInput,
     const NN_DataType *axiBiasInput,
-    NN_DataType bramLayerResults[NumberOfHidden * N + NOutput],
+    NN_DataType *axiLayerOutput,
     const unsigned int *numberInputs,
     const unsigned int *numberOutputs,
     const unsigned int *numberLayers,
@@ -25,7 +25,7 @@ void MLP(
 #pragma HLS INTERFACE m_axi port = output offset = slave bundle = axi_write max_write_burst_length = 128 depth = 2 * NOutput
 #pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * (KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K)
 #pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * (NumberOfHidden * N + NOutput)
-#pragma HLS INTERFACE bram port = bramLayerResults
+#pragma HLS INTERFACE m_axi port = axiLayerOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = 2 * (KInput + NumberOfHidden * N + NOutput)
 #pragma HLS INTERFACE s_axilite port = return bundle = configuration
 #pragma HLS INTERFACE s_axilite port = numberInputs bundle = configuration
 #pragma HLS INTERFACE s_axilite port = numberOutputs bundle = configuration
@@ -39,6 +39,7 @@ void MLP(
     static NN_DataType bramBias[NumberOfHidden * N + NOutput];
     NN_DataType inputData[KInput];
     NN_DataType layerBuffer0[N], layerBuffer1[N];
+    NN_DataType bramLayerResults[KInput + NumberOfHidden * N + NOutput];
 
     if (*loadParameters != 0)
     {
@@ -58,6 +59,9 @@ void MLP(
 
     memcpy(inputData, input, *numberInputs * sizeof(NN_DataType));
 
+    if (*exportLayers != 0)
+        copyArray<NN_DataType, 1>(inputData, bramLayerResults, *numberInputs);
+
     inputLayer<NN_DataType, ParEntriesInput, logParEntriesInput>(
         bramWeight,
         inputData,
@@ -68,9 +72,9 @@ void MLP(
 
     // only write to bramLayerResults to get a write only one port interface and not dual port
     if (*exportLayers != 0)
-        copyArray<NN_DataType, 1>(layerBuffer0, bramLayerResults, *numberNeurons);
+        copyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[*numberInputs], *numberNeurons);
 
-    copyArray<NN_DataType, ParEntries>(layerBuffer0, layerBuffer1, *numberNeurons);
+    copyArray<NN_DataType, 1>(layerBuffer0, layerBuffer1, *numberNeurons);
 
 HIDDEN:
     for (unsigned int i = 0; i < *numberLayers - 1; i++)
@@ -84,9 +88,9 @@ HIDDEN:
             *numberNeurons);
 
         if (*exportLayers != 0)
-            copyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[(i + 1) * *numberNeurons], *numberNeurons);
+            copyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[*numberInputs + (i + 1) * *numberNeurons], *numberNeurons);
 
-        copyArray<NN_DataType, ParEntries>(layerBuffer0, layerBuffer1, *numberNeurons);
+        copyArray<NN_DataType, 1>(layerBuffer0, layerBuffer1, *numberNeurons);
     }
     outputLayer<NN_DataType, ParEntriesOutput, logParEntriesOutput>(
         &bramWeight[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
@@ -97,7 +101,10 @@ HIDDEN:
         *numberNeurons);
 
     if (*exportLayers != 0)
-        copyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[*numberLayers * *numberNeurons], *numberOutputs);
+    {
+        copyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[*numberInputs + *numberLayers * *numberNeurons], *numberOutputs);
+        memcpy(bramLayerResults, axiLayerOutput, (*numberInputs + *numberNeurons * *numberLayers + *numberOutputs) * sizeof(NN_DataType));
+    }
 
     memcpy(output, layerBuffer0, *numberOutputs * sizeof(NN_DataType));
 }

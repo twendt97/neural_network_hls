@@ -1,6 +1,6 @@
 // defines for compilation behavior
 //#define TEST_MLP_CRANIUM
-#define TEST_TRAINING
+//#define TEST_TRAINING
 
 #include "Settings.hpp"
 #include "Simulation.hpp"
@@ -33,7 +33,7 @@ int main(void)
 
     NN_DataType *biasMemory = (NN_DataType *)malloc((NumberOfHidden * N + NOutput) * sizeof(NN_DataType));
     NN_DataType *biasMemoryBram = (NN_DataType *)malloc((NumberOfHidden * N + NOutput) * sizeof(NN_DataType));
-    NN_DataType *layerResultMemoryBram = (NN_DataType *)malloc(NumberOfHidden * N * sizeof(NN_DataType));
+    NN_DataType *layerResultMemoryBram = (NN_DataType *)malloc((KInput + NumberOfHidden * N + NOutput) * sizeof(NN_DataType));
 
     Activation hiddenActivation[NumberOfHidden];
     size_t hiddenSize[NumberOfHidden];
@@ -207,7 +207,6 @@ int main(void)
         return_value = 1;
         std::cout << "Output weight or bias gradients do not match" << std::endl << std::flush;
     }
-
 
 
 #endif

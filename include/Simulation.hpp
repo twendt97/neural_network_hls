@@ -16,10 +16,26 @@ void MLP(
     NN_DataType *output,
     const NN_DataType *axiWeightInput,
     const NN_DataType *axiBiasInput,
-    NN_DataType bramLayerResults[NumberOfHidden * N + NOutput],
+    NN_DataType *axiLayerOutput,
     const unsigned int *numberInputs,
     const unsigned int *numberOutputs,
     const unsigned int *numberLayers,
     const unsigned int *numberNeurons,
     const unsigned int *loadParameters,
     const unsigned int *exportLayers);
+
+void BGD(
+    const NN_DataType *axiMlpResultsInput,
+    const NN_DataType *axiClassesInput,
+    const NN_DataType *axiWeightInput,
+    const NN_DataType *axiBiasInput,
+    NN_DataType *axiWeightOutput,
+    NN_DataType *axiBiasOutput,
+    const unsigned int *numberInputs,
+    const unsigned int *numberOutputs,
+    const unsigned int *numberLayers,
+    const unsigned int *numberNeurons,
+    const unsigned int *numberSamples,
+    const unsigned int *loadParameters,
+    const unsigned int *batchSize,
+    const NN_DataType *learningRate);
