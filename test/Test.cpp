@@ -1,6 +1,6 @@
 // defines for compilation behavior
 //#define TEST_MLP_CRANIUM
-//#define TEST_TRAINING
+#define TEST_TRAINING
 
 #include "Settings.hpp"
 #include "Simulation.hpp"
@@ -10,6 +10,7 @@
 #include <iostream>
 #include <random>
 #include <stdlib.h>
+#include <stdint.h>
 
 #ifdef TEST_TRAINING
 #include "MNIST_Extractor/include/mnist_file.h"
@@ -22,6 +23,23 @@ void extractCraniumWeights(
     NN_DataType *hiddenBiasMemory,
     NN_DataType *outputBiasMemory,
     Network *net);
+
+/**
+ * @brief Takes an array of uint8_t and scales it to a float between 0 and 1
+ * 
+ * @
+ * */
+template <typename t_DataType>
+void scaleImages(
+    mnist_dataset_t *dataSet,
+    t_DataType *outputArray,
+    unsigned int numberFeatures);
+
+template <typename t_DataType>
+void createClassesVector(
+    mnist_dataset_t *classes,
+    t_DataType *outputArray,
+    unsigned int numberOutputs);
 
 int main(void)
 {
@@ -130,6 +148,50 @@ int main(void)
     NN_OutputVector testOutput, testClasses, outputBiasGradient, outputBiasGradientReference, outputErrorReference;
     NN_OutputWeights outputWeightGradient, outputWeightGradientReference;
 
+    mnist_dataset_t *mnistTrainingSet = mnist_get_dataset(trainImagesFile, trainLabelsFile);
+    mnist_dataset_t *mnistTestSet = mnist_get_dataset(testImagesFile, testLabelsFile);
+
+    NN_DataType *mnistTrainScaledImages = (NN_DataType *)malloc(mnistTrainingSet->size * MNIST_IMAGE_SIZE * sizeof(NN_DataType));
+    scaleImages<NN_DataType>(mnistTrainingSet, mnistTrainScaledImages, (unsigned int)MNIST_IMAGE_SIZE);
+
+    NN_DataType *mnistClassesVector = (NN_DataType *)malloc(mnistTrainingSet->size * MNIST_LABELS * sizeof(NN_DataType));
+    createClassesVector(mnistTrainingSet, mnistClassesVector, MNIST_LABELS);
+
+    DataSet *cranTrainingData = createDataSet(mnistTrainingSet->size, MNIST_IMAGE_SIZE, (NN_DataType **)mnistTrainScaledImages);
+    DataSet *cranTrainingClasses = createDataSet(mnistTrainingSet->size, MNIST_LABELS, (NN_DataType **)mnistClassesVector);
+
+    size_t hiddenSize[] = {16};
+    Activation hiddenActivation[] = {sigmoid};
+    Network *net = createNetwork(MNIST_IMAGE_SIZE, 1, hiddenSize, hiddenActivation, MNIST_LABELS, linear);
+
+    // train network with cross-entropy loss using Mini-Batch SGD
+    ParameterSet params;
+    params.network = net;
+    params.data = cranTrainingData;
+    params.classes = cranTrainingClasses;
+    params.lossFunction = MEAN_SQUARED_ERROR;
+    params.batchSize = 20;
+    params.learningRate = 3;
+    params.searchTime = 0;
+    params.regularizationStrength = 0;
+    params.momentumFactor = 0;
+    params.maxIters = 10000;
+    params.shuffle = 1;
+    params.verbose = 1;
+    optimize(params);
+
+    // test accuracy of network after training
+    std::cout << "Accuracy is " << accuracy(net, cranTrainingData, cranTrainingClasses) << std::endl
+              << std::flush;
+
+    mnist_free_dataset(mnistTrainingSet);
+    mnist_free_dataset(mnistTestSet);
+    // free(mnistClassesVector);
+    // free(mnistTrainScaledImages);
+    destroyNetwork(net);
+    destroyDataSet(cranTrainingData);
+    destroyDataSet(cranTrainingClasses);
+
     testWeights.setRandom();
     testInputError.setRandom();
     testInputCurResults.setRandom();
@@ -170,9 +232,9 @@ int main(void)
     else
     {
         return_value = 1;
-        std::cout << "Hidden weight or bias gradients do not match" << std::endl << std::flush;
+        std::cout << "Hidden weight or bias gradients do not match" << std::endl
+                  << std::flush;
     }
-
 
     // Output
     outputWeightGradientReference.setRandom();
@@ -203,15 +265,14 @@ int main(void)
         outputError.data(),
         false);
 
-    if (outputWeightGradientReference.isApprox(outputWeightGradient) 
-        && outputBiasGradientReference.isApprox(outputBiasGradient))
+    if (outputWeightGradientReference.isApprox(outputWeightGradient) && outputBiasGradientReference.isApprox(outputBiasGradient))
         return_value = 0;
     else
     {
         return_value = 1;
-        std::cout << "Output weight or bias gradients do not match" << std::endl << std::flush;
+        std::cout << "Output weight or bias gradients do not match" << std::endl
+                  << std::flush;
     }
-
 
 #endif
 
@@ -273,5 +334,41 @@ void extractCraniumWeights(
     for (unsigned int i = 0; i < NOutput; i++)
     {
         outputBiasMemory[i] = net->connections[NumberOfHidden]->bias->data[i];
+    }
+}
+
+template <typename t_DataType>
+void scaleImages(
+    mnist_dataset_t *dataSet,
+    t_DataType *outputArray,
+    unsigned int numberFeatures)
+{
+
+    for (unsigned int i = 0; i < dataSet->size; i++)
+    {
+        for (unsigned int j = 0; j < numberFeatures; j++)
+        {
+            outputArray[i * numberFeatures + j] = ((t_DataType)dataSet->images[i].pixels[j]) / 255.0;
+        }
+    }
+}
+
+/**
+ * @brief Takes the classes as integer number between 0 and numberOutputs - 1 and returns a vector
+ *        where the corresponding index number is 1 and the others are 0
+ * */
+
+template <typename t_DataType>
+void createClassesVector(
+    mnist_dataset_t *classes,
+    t_DataType *outputArray,
+    unsigned int numberOutputs)
+{
+    for (unsigned int i = 0; i < classes->size; i++)
+    {
+        for (uint8_t j = 0; j < numberOutputs; j++)
+        {
+            outputArray[i * numberOutputs + j] = classes->labels[i] == j ? (t_DataType)1 : (t_DataType)0;
+        }
     }
 }
