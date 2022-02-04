@@ -594,10 +594,9 @@ namespace uz_mlp
         hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> l_weightGradient, l_weightGradientScal;
         hls::stream<typename xf::blas::WideType<t_DataType, t_ParEntries>::t_TypeInt> l_biasGradient, l_biasGradientScal;
 
-        t_DataType l_multiplicator = p_learningRate / p_batchSize;
-        l_multiplicator *= (t_DataType)-1;
+        t_DataType l_multiplicator = (t_DataType)-1 * p_learningRate / p_batchSize;
 
-        xf::blas::readVec2Stream(p_weightGradient, p_weightSize, l_weightGradient);
+        xf::blas::readVec2Stream<t_DataType, t_ParEntries>(p_weightGradient, p_weightSize, l_weightGradient);
         xf::blas::scal<t_DataType, t_ParEntries>(
             p_weightSize,
             l_multiplicator,
@@ -605,7 +604,7 @@ namespace uz_mlp
             l_weightGradientScal
         );
 
-        xf::blas::readVec2Stream(p_biasGradient, p_biasSize, l_biasGradient);
+        xf::blas::readVec2Stream<t_DataType, t_ParEntries>(p_biasGradient, p_biasSize, l_biasGradient);
         xf::blas::scal<t_DataType, t_ParEntries>(
             p_weightSize,
             l_multiplicator,

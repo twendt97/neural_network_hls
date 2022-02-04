@@ -4,3 +4,6 @@
 [submodule "Cranium"]
 	path = Cranium
 	url = https://github.com/100/Cranium.git
+[submodule "MNIST_Extractor"]
+	path = MNIST_Extractor
+	url = https://github.com/AndrewCarterUK/mnist-neural-network-plain-c.git

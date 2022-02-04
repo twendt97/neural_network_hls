@@ -11,6 +11,10 @@
 #include <random>
 #include <stdlib.h>
 
+#ifdef TEST_TRAINING
+#include "MNIST_Extractor/include/mnist_file.h"
+#endif
+
 void extractCraniumWeights(
     NN_DataType *hiddenWeightMemory,
     NN_DataType *inputWeightMemory,
