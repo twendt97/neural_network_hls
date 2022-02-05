@@ -64,6 +64,8 @@
         "stdexcept": "cpp",
         "thread": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "strstream": "cpp",
+        "valarray": "cpp"
     }
 }

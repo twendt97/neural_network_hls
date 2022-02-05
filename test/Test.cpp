@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 #ifdef TEST_TRAINING
-#include "MNIST_Extractor/include/mnist_file.h"
+#include "MNIST_Extractor/include/mnist/mnist_reader.hpp"
 #endif
 
 void extractCraniumWeights(
@@ -26,18 +26,17 @@ void extractCraniumWeights(
 
 /**
  * @brief Takes an array of uint8_t and scales it to a float between 0 and 1
- * 
+ *
  * @
  * */
-template <typename t_DataType>
+template <typename t_DataType, template <typename...> class Container = std::vector, template <typename...> class Sub = std::vector, typename Pixel = uint8_t, typename Label = uint8_t>
 void scaleImages(
-    mnist_dataset_t *dataSet,
-    t_DataType *outputArray,
-    unsigned int numberFeatures);
+    mnist::MNIST_dataset<Container, Sub<Pixel>, Label> &dataSet,
+    t_DataType *outputArray);
 
-template <typename t_DataType>
-void createClassesVector(
-    mnist_dataset_t *classes,
+template <typename t_DataType, template <typename...> class Container = std::vector, template <typename...> class Sub = std::vector, typename Pixel = uint8_t, typename Label = uint8_t>
+void createClasses(
+    mnist::MNIST_dataset<Container, Sub<Pixel>, Label> &dataSet,
     t_DataType *outputArray,
     unsigned int numberOutputs);
 
@@ -148,21 +147,26 @@ int main(void)
     NN_OutputVector testOutput, testClasses, outputBiasGradient, outputBiasGradientReference, outputErrorReference;
     NN_OutputWeights outputWeightGradient, outputWeightGradientReference;
 
-    mnist_dataset_t *mnistTrainingSet = mnist_get_dataset(trainImagesFile, trainLabelsFile);
-    mnist_dataset_t *mnistTestSet = mnist_get_dataset(testImagesFile, testLabelsFile);
+    auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("/home/thilo/master_thesis_code/uz_neural_network_hls_refactor/MNIST_Extractor", 0, 0);
 
-    NN_DataType *mnistTrainScaledImages = (NN_DataType *)malloc(mnistTrainingSet->size * MNIST_IMAGE_SIZE * sizeof(NN_DataType));
-    scaleImages<NN_DataType>(mnistTrainingSet, mnistTrainScaledImages, (unsigned int)MNIST_IMAGE_SIZE);
+    std::size_t numberImages, imageSize, numberLabels;
+    numberImages = mnistDataSet.training_images.size();
+    numberLabels = mnistDataSet.training_labels.size();
+    assert(numberImages == numberLabels);
+    imageSize = mnistDataSet.training_images.data()->size();
 
-    NN_DataType *mnistClassesVector = (NN_DataType *)malloc(mnistTrainingSet->size * MNIST_LABELS * sizeof(NN_DataType));
-    createClassesVector(mnistTrainingSet, mnistClassesVector, MNIST_LABELS);
+    NN_DataType *mnistTrainScaledImages = (NN_DataType *)malloc(numberImages * imageSize * sizeof(NN_DataType));
+    scaleImages<NN_DataType>(mnistDataSet, mnistTrainScaledImages);
 
-    DataSet *cranTrainingData = createDataSet(mnistTrainingSet->size, MNIST_IMAGE_SIZE, (NN_DataType **)mnistTrainScaledImages);
-    DataSet *cranTrainingClasses = createDataSet(mnistTrainingSet->size, MNIST_LABELS, (NN_DataType **)mnistClassesVector);
+    NN_DataType *mnistClassesVector = (NN_DataType *)malloc(numberLabels * numberOutputs * sizeof(NN_DataType));
+    createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, numberOutputs);
+
+    DataSet *cranTrainingData = createDataSet(numberImages, imageSize, (NN_DataType **)mnistTrainScaledImages);
+    DataSet *cranTrainingClasses = createDataSet(numberLabels, numberOutputs, (NN_DataType **)mnistClassesVector);
 
     size_t hiddenSize[] = {16};
     Activation hiddenActivation[] = {sigmoid};
-    Network *net = createNetwork(MNIST_IMAGE_SIZE, 1, hiddenSize, hiddenActivation, MNIST_LABELS, linear);
+    Network *net = createNetwork(imageSize, 1, hiddenSize, hiddenActivation, numberOutputs, linear);
 
     // train network with cross-entropy loss using Mini-Batch SGD
     ParameterSet params;
@@ -184,10 +188,6 @@ int main(void)
     std::cout << "Accuracy is " << accuracy(net, cranTrainingData, cranTrainingClasses) << std::endl
               << std::flush;
 
-    mnist_free_dataset(mnistTrainingSet);
-    mnist_free_dataset(mnistTestSet);
-    // free(mnistClassesVector);
-    // free(mnistTrainScaledImages);
     destroyNetwork(net);
     destroyDataSet(cranTrainingData);
     destroyDataSet(cranTrainingClasses);
@@ -337,18 +337,19 @@ void extractCraniumWeights(
     }
 }
 
-template <typename t_DataType>
+template <typename t_DataType, template <typename...> class Container = std::vector, template <typename...> class Sub = std::vector, typename Pixel = uint8_t, typename Label = uint8_t>
 void scaleImages(
-    mnist_dataset_t *dataSet,
-    t_DataType *outputArray,
-    unsigned int numberFeatures)
+    mnist::MNIST_dataset<Container, Sub<Pixel>, Label> &dataSet,
+    t_DataType *outputArray)
 {
-
-    for (unsigned int i = 0; i < dataSet->size; i++)
+    std::size_t numberElements, numberFeatures;
+    numberElements = dataSet.test_images.size();
+    numberFeatures = dataSet.test_images.data()->size();
+    for (std::size_t i = 0; i < numberElements; i++)
     {
-        for (unsigned int j = 0; j < numberFeatures; j++)
+        for (std::size_t j = 0; j < numberFeatures; j++)
         {
-            outputArray[i * numberFeatures + j] = ((t_DataType)dataSet->images[i].pixels[j]) / 255.0;
+            outputArray[i * numberFeatures + j] = ((t_DataType)dataSet.training_images[i].data()[j]) / 255.0;
         }
     }
 }
@@ -358,17 +359,19 @@ void scaleImages(
  *        where the corresponding index number is 1 and the others are 0
  * */
 
-template <typename t_DataType>
-void createClassesVector(
-    mnist_dataset_t *classes,
+template <typename t_DataType, template <typename...> class Container = std::vector, template <typename...> class Sub = std::vector, typename Pixel = uint8_t, typename Label = uint8_t>
+void createClasses(
+    mnist::MNIST_dataset<Container, Sub<Pixel>, Label> &dataSet,
     t_DataType *outputArray,
     unsigned int numberOutputs)
 {
-    for (unsigned int i = 0; i < classes->size; i++)
+    std::size_t numberEntries = dataSet.training_labels.size();
+
+    for (std::size_t i = 0; i < numberEntries; i++)
     {
-        for (uint8_t j = 0; j < numberOutputs; j++)
+        for (Label j = 0; j < numberOutputs; j++)
         {
-            outputArray[i * numberOutputs + j] = classes->labels[i] == j ? (t_DataType)1 : (t_DataType)0;
+            outputArray[i * numberOutputs + j] = dataSet.training_labels[i] == j ? (t_DataType)1 : (t_DataType)0;
         }
     }
 }

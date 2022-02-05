@@ -29,7 +29,4 @@ constexpr unsigned streamDepth = 16;
 
 // Training
 constexpr unsigned maxSamples = 10;
-constexpr char *trainImagesFile = "MNIST_Extractor/data/train-images-idx3-ubyte";
-constexpr char *trainLabelsFile = "MNIST_Extractor/data/train-labels-idx1-ubyte";
-constexpr char *testImagesFile = "MNIST_Extractor/data/t10k-images-idx3-ubyte";
-constexpr char *testLabelsFile = "MNIST_Extractor/data/t10k-labels-idx1-ubyte";
+constexpr unsigned numberOutputs = 10;
