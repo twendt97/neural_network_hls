@@ -40,6 +40,12 @@ void createClasses(
     t_DataType *outputArray,
     unsigned int numberOutputs);
 
+template <typename t_DataType>
+t_DataType **createCraniumInputArray(
+    t_DataType *values,
+    std::size_t rows,
+    std::size_t cols);
+
 int main(void)
 {
     int return_value = 0;
@@ -147,7 +153,7 @@ int main(void)
     NN_OutputVector testOutput, testClasses, outputBiasGradient, outputBiasGradientReference, outputErrorReference;
     NN_OutputWeights outputWeightGradient, outputWeightGradientReference;
 
-    auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("/home/thilo/master_thesis_code/uz_neural_network_hls_refactor/MNIST_Extractor", 0, 0);
+    auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("/home/thilo/master_thesis_code/uz_neural_network_hls_refactor/MNIST_Extractor", 2000, 2000);
 
     std::size_t numberImages, imageSize, numberLabels;
     numberImages = mnistDataSet.training_images.size();
@@ -156,16 +162,21 @@ int main(void)
     imageSize = mnistDataSet.training_images.data()->size();
 
     NN_DataType *mnistTrainScaledImages = (NN_DataType *)malloc(numberImages * imageSize * sizeof(NN_DataType));
+    assert(mnistTrainScaledImages != NULL);
     scaleImages<NN_DataType>(mnistDataSet, mnistTrainScaledImages);
 
     NN_DataType *mnistClassesVector = (NN_DataType *)malloc(numberLabels * numberOutputs * sizeof(NN_DataType));
+    assert(mnistClassesVector != NULL);
     createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, numberOutputs);
 
-    DataSet *cranTrainingData = createDataSet(numberImages, imageSize, (NN_DataType **)mnistTrainScaledImages);
-    DataSet *cranTrainingClasses = createDataSet(numberLabels, numberOutputs, (NN_DataType **)mnistClassesVector);
+    NN_DataType **craniumInputImages = createCraniumInputArray<NN_DataType>(mnistTrainScaledImages, numberImages, imageSize);;
+    NN_DataType **craniumClasses = createCraniumInputArray<NN_DataType>(mnistClassesVector, numberLabels, numberOutputs);
 
-    size_t hiddenSize[] = {16};
-    Activation hiddenActivation[] = {sigmoid};
+    DataSet *cranTrainingData = createDataSet(numberImages, imageSize, craniumInputImages);
+    DataSet *cranTrainingClasses = createDataSet(numberLabels, numberOutputs, craniumClasses);
+
+    size_t hiddenSize[1] = {16};
+    Activation hiddenActivation[1] = {sigmoid};
     Network *net = createNetwork(imageSize, 1, hiddenSize, hiddenActivation, numberOutputs, linear);
 
     // train network with cross-entropy loss using Mini-Batch SGD
@@ -179,9 +190,9 @@ int main(void)
     params.searchTime = 0;
     params.regularizationStrength = 0;
     params.momentumFactor = 0;
-    params.maxIters = 10000;
-    params.shuffle = 1;
-    params.verbose = 1;
+    params.maxIters = 100;
+    params.shuffle = 0;
+    params.verbose = 0;
     optimize(params);
 
     // test accuracy of network after training
@@ -189,8 +200,10 @@ int main(void)
               << std::flush;
 
     destroyNetwork(net);
-    destroyDataSet(cranTrainingData);
-    destroyDataSet(cranTrainingClasses);
+    free(mnistTrainScaledImages);
+    free(mnistClassesVector);
+    free(craniumInputImages);
+    free(craniumClasses);
 
     testWeights.setRandom();
     testInputError.setRandom();
@@ -374,4 +387,20 @@ void createClasses(
             outputArray[i * numberOutputs + j] = dataSet.training_labels[i] == j ? (t_DataType)1 : (t_DataType)0;
         }
     }
+}
+
+template <typename t_DataType>
+t_DataType **createCraniumInputArray(
+    t_DataType *values,
+    std::size_t rows,
+    std::size_t cols)
+{
+    t_DataType **craniumInput = (t_DataType **)malloc(rows * sizeof(t_DataType *));
+
+    for (std::size_t i = 0; i < rows; i++)
+    {
+        craniumInput[i] = &values[i * cols];
+    }
+
+    return craniumInput;
 }
