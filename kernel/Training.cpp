@@ -19,7 +19,6 @@ void BGD(
     const unsigned int *numberOutputs,
     const unsigned int *numberLayers,
     const unsigned int *numberNeurons,
-    const unsigned int *numberSamples,
     const unsigned int *loadParameters,
     const unsigned int *batchSize,
     const NN_DataType *learningRate)
@@ -51,11 +50,11 @@ void BGD(
     }
 
     // copy volatile parameters
-    memcpy(bramClasses, axiClassesInput, *numberSamples * sizeof(NN_DataType));
+    memcpy(bramClasses, axiClassesInput, *batchSize * sizeof(NN_DataType));
     memcpy(
         bramMlpResults,
         axiMlpResultsInput,
-        *numberSamples * (*numberInputs + *numberLayers * *numberNeurons + *numberOutputs) * sizeof(NN_DataType));
+        *batchSize * (*numberInputs + *numberLayers * *numberNeurons + *numberOutputs) * sizeof(NN_DataType));
 
     // calculate each iteration of backpropagation
 
@@ -82,31 +81,32 @@ void BGD(
             bramError1,
             *numberOutputs);
 
-        for (int layer = *numberLayers - 1; layer > 0; layer--)
-        {
-            unsigned int p_n = layer < *numberLayers - 1 ? *numberNeurons : *numberOutputs;
-            computeHiddenGradient<NN_DataType, ParEntries, logParEntries, streamDepth>(
-                p_n,
-                *numberNeurons,
-                &bramWeight[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
-                bramError1,
-                &currentResults[layer * *numberNeurons],
-                &currentResults[(layer - 1) * *numberNeurons],
-                &bramWeightGradientAvg[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
-                &bramBiasGradientAvg[layer * *numberNeurons],
-                bramError0,
-                initZero);
+        // for (int layer = *numberLayers - 1; layer > 0; layer--)
+        // {
+        //     unsigned int p_n = layer < *numberLayers - 1 ? *numberNeurons : *numberOutputs;
+        //     computeHiddenGradient<NN_DataType, ParEntries, logParEntries, streamDepth>(
+        //         p_n,
+        //         *numberNeurons,
+        //         &bramWeight[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
+        //         bramError1,
+        //         &currentResults[layer * *numberNeurons],
+        //         &currentResults[(layer - 1) * *numberNeurons],
+        //         &bramWeightGradientAvg[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
+        //         &bramBiasGradientAvg[layer * *numberNeurons],
+        //         bramError0,
+        //         initZero);
 
-            copyArray<NN_DataType, ParEntriesOutput>(
-                bramError1,
-                bramError0,
-                *numberNeurons);
-        }
+        //     copyArray<NN_DataType, ParEntriesOutput>(
+        //         bramError1,
+        //         bramError0,
+        //         *numberNeurons);
+        // }
 
         computeHiddenGradient<NN_DataType, ParEntriesInput, logParEntriesInput, streamDepth>(
+            *numberOutputs,
             *numberNeurons,
             *numberInputs,
-            bramWeight,
+            &bramWeight[*numberNeurons * *numberInputs],
             bramError1,
             &currentResults[*numberInputs],
             currentResults,

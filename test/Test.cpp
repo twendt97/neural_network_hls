@@ -1,6 +1,7 @@
 // defines for compilation behavior
-//#define TEST_MLP_CRANIUM
+#define TEST_MLP_CRANIUM
 #define TEST_TRAINING
+// #define TEST_TRAINING_COMPONENTS
 
 #include "Settings.hpp"
 #include "Simulation.hpp"
@@ -12,9 +13,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#ifdef TEST_TRAINING
 #include "MNIST_Extractor/include/mnist/mnist_reader.hpp"
-#endif
 
 void extractCraniumWeights(
     NN_DataType *hiddenWeightMemory,
@@ -46,6 +45,19 @@ t_DataType **createCraniumInputArray(
     std::size_t rows,
     std::size_t cols);
 
+void testBGD(
+    NN_DataType *input,
+    NN_DataType *weight,
+    NN_DataType *bias,
+    const NN_DataType *classes,
+    const unsigned int *numberInputs,
+    const unsigned int *numberOutputs,
+    const unsigned int *numberLayers,
+    const unsigned int *numberNeurons,
+    const unsigned int *batchSize,
+    const NN_DataType *learningRate,
+    const std::size_t maxIterations);
+
 int main(void)
 {
     int return_value = 0;
@@ -55,11 +67,8 @@ int main(void)
     // create cranium network
 
     // Make sure that biases and weights are in a consistent memory location
-    NN_DataType *weightMemory = (NN_DataType *)malloc((N * KInput + (NumberOfHidden - 1) * N * K + NOutput * K) * sizeof(NN_DataType));
-    NN_DataType *weightMemoryBram = (NN_DataType *)malloc((N * KInput + (NumberOfHidden - 1) * N * K + NOutput * K) * sizeof(NN_DataType));
-
-    NN_DataType *biasMemory = (NN_DataType *)malloc((NumberOfHidden * N + NOutput) * sizeof(NN_DataType));
-    NN_DataType *biasMemoryBram = (NN_DataType *)malloc((NumberOfHidden * N + NOutput) * sizeof(NN_DataType));
+    NN_DataType *weightMemory = (NN_DataType *)malloc(weightBufferSize * sizeof(NN_DataType));
+    NN_DataType *biasMemory = (NN_DataType *)malloc(biasBufferSize * sizeof(NN_DataType));
     NN_DataType *layerResultMemoryBram = (NN_DataType *)malloc((KInput + NumberOfHidden * N + NOutput) * sizeof(NN_DataType));
 
     Activation hiddenActivation[NumberOfHidden];
@@ -81,59 +90,45 @@ int main(void)
         &biasMemory[NumberOfHidden * N],
         net);
 
+    std::cout << "Testing hardware implementation of MLP against software implemenation of Cranium..." << std::endl
+              << std::flush;
+
     NN_InputVector inputEigen;
     inputEigen.setRandom();
-
     Matrix *inputCran = createMatrix(1, KInput, (float *)inputEigen.data());
     forwardPass(net, inputCran);
 
     NN_OutputVector resultReference(getOuput(net)->data);
     NN_OutputVector result;
 
-    std::cout << "Result reference: \n"
-              << resultReference << std::endl;
+    for (std::size_t i = 0; i < 2; i++)
+    {
+        unsigned int loadParameters = i == 0 ? 1 : 0;
+        unsigned int exportLayers = 1;
 
-    unsigned int loadParameters = 1;
-    unsigned int exportLayers = 0;
-
-    MLP(
-        inputEigen.data(),
-        result.data(),
-        weightMemory,
-        biasMemory,
-        weightMemory,
-        &KInput,
-        &NOutput,
-        &NumberOfHidden,
-        &N,
-        &loadParameters,
-        &exportLayers);
-
-    loadParameters = 0;
-    exportLayers = 0;
-
-    MLP(
-        inputEigen.data(),
-        result.data(),
-        weightMemory,
-        biasMemory,
-        weightMemory,
-        &KInput,
-        &NOutput,
-        &NumberOfHidden,
-        &N,
-        &loadParameters,
-        &exportLayers);
-
-    std::cout << "\n Result: \n"
-              << result << std::endl;
+        MLP(
+            inputEigen.data(),
+            result.data(),
+            weightMemory,
+            biasMemory,
+            weightMemory,
+            &KInput,
+            &NOutput,
+            &NumberOfHidden,
+            &N,
+            &loadParameters,
+            &exportLayers);
+    }
 
     if (result.isApprox(resultReference))
     {
-        return_value = 0;
+        std::cout << "Hardware produces the same results as software" << std::endl
+                  << std::flush;
     }
     else
     {
+        std::cout << "Hardware and software results differ" << std::endl
+                  << std::flush;
         return_value = 1;
     }
 
@@ -148,13 +143,12 @@ int main(void)
 #endif
 
 #ifdef TEST_TRAINING
-    NN_Matrix testWeights, weightGradientsReference, weightGradients;
-    NN_Vector testInputError, testInputCurResults, biasGradientReference, testInputPrev, biasGradient, outputError, errorReference;
-    NN_OutputVector testOutput, testClasses, outputBiasGradient, outputBiasGradientReference, outputErrorReference;
-    NN_OutputWeights outputWeightGradient, outputWeightGradientReference;
+    NN_DataType *weightReference = (NN_DataType *)malloc(weightBufferSize * sizeof(NN_DataType));
+    NN_DataType *biasReference = (NN_DataType *)malloc(biasBufferSize * sizeof(NN_DataType));
 
+    std::cout << "Extracting MNIST dataset..." << std::endl
+              << std::flush;
     auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("/home/thilo/master_thesis_code/uz_neural_network_hls_refactor/MNIST_Extractor", 2000, 2000);
-
     std::size_t numberImages, imageSize, numberLabels;
     numberImages = mnistDataSet.training_images.size();
     numberLabels = mnistDataSet.training_labels.size();
@@ -169,41 +163,94 @@ int main(void)
     assert(mnistClassesVector != NULL);
     createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, numberOutputs);
 
-    NN_DataType **craniumInputImages = createCraniumInputArray<NN_DataType>(mnistTrainScaledImages, numberImages, imageSize);;
+    NN_DataType **craniumInputImages = createCraniumInputArray<NN_DataType>(mnistTrainScaledImages, numberImages, imageSize);
     NN_DataType **craniumClasses = createCraniumInputArray<NN_DataType>(mnistClassesVector, numberLabels, numberOutputs);
 
     DataSet *cranTrainingData = createDataSet(numberImages, imageSize, craniumInputImages);
     DataSet *cranTrainingClasses = createDataSet(numberLabels, numberOutputs, craniumClasses);
 
-    size_t hiddenSize[1] = {16};
-    Activation hiddenActivation[1] = {sigmoid};
-    Network *net = createNetwork(imageSize, 1, hiddenSize, hiddenActivation, numberOutputs, linear);
-
+    std::cout << "Running optimzation with Cranium..." << std::endl
+              << std::flush;
     // train network with cross-entropy loss using Mini-Batch SGD
     ParameterSet params;
     params.network = net;
     params.data = cranTrainingData;
     params.classes = cranTrainingClasses;
     params.lossFunction = MEAN_SQUARED_ERROR;
-    params.batchSize = 20;
-    params.learningRate = 3;
+    params.batchSize = batchSize;
+    params.learningRate = learningRate;
     params.searchTime = 0;
     params.regularizationStrength = 0;
     params.momentumFactor = 0;
-    params.maxIters = 100;
+    params.maxIters = maxIters;
     params.shuffle = 0;
     params.verbose = 0;
     optimize(params);
 
     // test accuracy of network after training
-    std::cout << "Accuracy is " << accuracy(net, cranTrainingData, cranTrainingClasses) << std::endl
-              << std::flush;
+    std::cout << "Accuracy is of Cranium training is " << accuracy(net, cranTrainingData, cranTrainingClasses) << std::endl
+             << std::flush;
+
+    extractCraniumWeights(
+        &weightReference[N * KInput],
+        weightReference,
+        &weightReference[N * KInput + (NumberOfHidden - 1) * N * K],
+        biasReference,
+        &biasReference[NumberOfHidden * N],
+        net);
+
+    std::cout << "Running optimization with hardware implementation..." << std::endl << std::flush;
+
+    testBGD(
+        mnistTrainScaledImages,
+        weightMemory,
+        biasMemory,
+        mnistClassesVector,
+        &KInput,
+        &NOutput,
+        &NumberOfHidden,
+        &N,
+        &batchSize,
+        &learningRate,
+        maxIters);
+
+    for (size_t i = 0; i < weightBufferSize; i++)
+    {
+        if(abs(weightReference[i] - weightMemory[i]) > precision)
+        {
+            std::cout << "Weights after optimization differ" << std::endl << std::flush;
+            return_value = 2;
+            break;
+        }
+    }
+
+    for (size_t i = 0; i < biasBufferSize; i++)
+    {
+        if(abs(biasReference[i] - biasMemory[i]) > precision)
+        {
+            std::cout << "Bias after optimization differ" << std::endl << std::flush;
+            return_value = 3;
+            break;
+        }
+    }
+    
+    
+    
 
     destroyNetwork(net);
     free(mnistTrainScaledImages);
     free(mnistClassesVector);
     free(craniumInputImages);
     free(craniumClasses);
+
+#endif
+
+#ifdef TEST_TRAINING_COMPONENTS
+
+    NN_Matrix testWeights, weightGradientsReference, weightGradients;
+    NN_Vector testInputError, testInputCurResults, biasGradientReference, testInputPrev, biasGradient, outputError, errorReference;
+    NN_OutputVector testOutput, testClasses, outputBiasGradient, outputBiasGradientReference, outputErrorReference;
+    NN_OutputWeights outputWeightGradient, outputWeightGradientReference;
 
     testWeights.setRandom();
     testInputError.setRandom();
@@ -403,4 +450,65 @@ t_DataType **createCraniumInputArray(
     }
 
     return craniumInput;
+}
+
+void testBGD(
+    NN_DataType *input,
+    NN_DataType *weight,
+    NN_DataType *bias,
+    const NN_DataType *classes,
+    const unsigned int *numberInputs,
+    const unsigned int *numberOutputs,
+    const unsigned int *numberLayers,
+    const unsigned int *numberNeurons,
+    const unsigned int *batchSize,
+    const NN_DataType *learningRate,
+    const std::size_t maxIterations)
+{
+    const std::size_t layerBufferSize = *numberInputs + *numberLayers * *numberNeurons + *numberOutputs;
+    const unsigned int exportLayers = 1;
+    std::size_t iter = 0;
+    NN_DataType *mlpLayerResults = (NN_DataType *)malloc(*batchSize * layerBufferSize * sizeof(NN_DataType));
+    NN_DataType *outputBuffer = (NN_DataType *)malloc(*numberOutputs * sizeof(NN_DataType));
+
+    while (iter < maxIterations)
+    {
+        unsigned int loadParametersBgd = iter == 0 ? (unsigned int)1 : (unsigned int)0;
+        for (size_t i = 0; i < *batchSize; i++)
+        {
+            unsigned int loadParametersMlp = i == 0 ? (unsigned int)1 : (unsigned int)0;
+            MLP(
+                &input[*numberInputs * (iter + i)],
+                outputBuffer,
+                weight,
+                bias,
+                &mlpLayerResults[i * layerBufferSize],
+                numberInputs,
+                numberOutputs,
+                numberLayers,
+                numberNeurons,
+                &loadParametersMlp,
+                &exportLayers);
+        }
+
+        BGD(
+            mlpLayerResults,
+            classes,
+            weight,
+            bias,
+            weight,
+            bias,
+            numberInputs,
+            numberOutputs,
+            numberLayers,
+            numberNeurons,
+            &loadParametersBgd,
+            batchSize,
+            learningRate);
+
+        iter++;
+    }
+
+    free(mlpLayerResults);
+    free(outputBuffer);
 }

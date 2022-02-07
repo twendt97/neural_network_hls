@@ -22,7 +22,7 @@ source commonSettings.tcl
 add_files -cflags "$defines $include_paths $compiler_flags" "kernel/Mlp.cpp"
 
 # Add test bench & files
-add_files -tb -cflags "$defines $include_paths $compiler_flags -DTEST_MLP_CRANIUM" "test/Test.cpp"
+add_files -tb -cflags "$defines $include_paths $compiler_flags -DTEST_MLP_CRANIUM" "test/Test.cpp kernel/Training.cpp"
 
 # Set the top-level function
 set_top MLP

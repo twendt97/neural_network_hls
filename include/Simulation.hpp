@@ -35,7 +35,6 @@ void BGD(
     const unsigned int *numberOutputs,
     const unsigned int *numberLayers,
     const unsigned int *numberNeurons,
-    const unsigned int *numberSamples,
     const unsigned int *loadParameters,
     const unsigned int *batchSize,
     const NN_DataType *learningRate);

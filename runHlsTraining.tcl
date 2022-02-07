@@ -22,7 +22,7 @@ source commonSettings.tcl
 add_files -cflags "$defines $include_paths $compiler_flags" "kernel/Training.cpp"
 #add_files -cflags "-I${ws} -I${ws}/Vitis_Libraries" VitisGemv.cpp
 # Add test bench & files
-add_files -tb -cflags "$defines $include_paths $compiler_flags -DTEST_TRAINING" "MNIST_Extractor/mnist_file.c test/Test.cpp"
+add_files -tb -cflags "$defines $include_paths $compiler_flags -DTEST_TRAINING" "test/Test.cpp kernel/Mlp.cpp"
 #add_files -tb result.golden.dat
 
 # Set the top-level function
