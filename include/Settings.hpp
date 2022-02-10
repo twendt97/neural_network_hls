@@ -8,7 +8,7 @@ constexpr unsigned K = N;  //  Cols of A and Rows of Input Vector
 
 constexpr unsigned KInput = 784;
 constexpr unsigned NOutput = 10;
-constexpr unsigned NumberOfHidden = 1;
+constexpr unsigned NumberOfHidden = 4;
 constexpr unsigned weightBufferSize = N * KInput + (NumberOfHidden - 1) * N * K + NOutput * K;
 constexpr unsigned biasBufferSize = NumberOfHidden * N + NOutput;
 

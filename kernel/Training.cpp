@@ -81,29 +81,32 @@ void BGD(
             bramError1,
             *numberOutputs);
 
-        // for (int layer = *numberLayers - 1; layer > 0; layer--)
-        // {
-        //     unsigned int p_n = layer < *numberLayers - 1 ? *numberNeurons : *numberOutputs;
-        //     computeHiddenGradient<NN_DataType, ParEntries, logParEntries, streamDepth>(
-        //         p_n,
-        //         *numberNeurons,
-        //         &bramWeight[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
-        //         bramError1,
-        //         &currentResults[layer * *numberNeurons],
-        //         &currentResults[(layer - 1) * *numberNeurons],
-        //         &bramWeightGradientAvg[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
-        //         &bramBiasGradientAvg[layer * *numberNeurons],
-        //         bramError0,
-        //         initZero);
+        for (int layer = *numberLayers - 1; layer > 0; layer--)
+        {
+            unsigned int p_n = layer < *numberLayers - 1 ? *numberNeurons : *numberOutputs;
+            // unsigned int outputsPrev = layer > 0 ? *numberNeurons : *numberInputs;
+            computeHiddenGradient<NN_DataType, ParEntries, logParEntries, streamDepth>(
+                p_n,
+                *numberNeurons,
+                *numberNeurons,
+                &bramWeight[(*numberInputs + layer * *numberNeurons) * *numberNeurons],
+                bramError1,
+                &currentResults[*numberInputs + layer * *numberNeurons],
+                &currentResults[*numberInputs + (layer - 1) * *numberNeurons],
+                &bramWeightGradientAvg[(*numberInputs + (layer - 1) * *numberNeurons) * *numberNeurons],
+                &bramBiasGradientAvg[layer * *numberNeurons],
+                bramError0,
+                initZero);
 
-        //     copyArray<NN_DataType, ParEntriesOutput>(
-        //         bramError1,
-        //         bramError0,
-        //         *numberNeurons);
-        // }
+            copyArray<NN_DataType, ParEntriesOutput>(
+                bramError0,
+                bramError1,
+                *numberNeurons);
+        }
 
+        unsigned int l_n = *numberLayers > 1 ? *numberNeurons : *numberOutputs;
         computeHiddenGradient<NN_DataType, ParEntriesInput, logParEntriesInput, streamDepth>(
-            *numberOutputs,
+            l_n,
             *numberNeurons,
             *numberInputs,
             &bramWeight[*numberNeurons * *numberInputs],

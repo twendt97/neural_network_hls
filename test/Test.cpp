@@ -225,12 +225,6 @@ int main(void)
         &exportLayers
     );
 
-    Eigen::Matrix<NN_DataType, NOutput, 1> outputReferenceEigen(net->layers[2]->input->data), outputEigen(output);
-    assert(outputReferenceEigen.isApprox(outputEigen));
-    checkEqualty<NN_DataType>(net->layers[0]->input->data, layerResultMemory, precision, KInput, "Inputs differ");
-    checkEqualty<NN_DataType>(net->layers[1]->input->data, &layerResultMemory[KInput], precision, N, "Hidden differ");
-    checkEqualty<NN_DataType>(outputEigen.data(), &layerResultMemory[KInput + N], precision, NOutput, "Outputs differ");
-
     BGD(
         layerResultMemory,
         mnistClassesVector,
@@ -270,7 +264,7 @@ int main(void)
             weightReference,
             weightMemory,
             precision,
-            N * KInput + K * NOutput,
+            N * KInput + (NumberOfHidden - 1) * N * K + K * NOutput,
             "Weights after optimization differ"))
         return_value = 1;
 
@@ -278,7 +272,7 @@ int main(void)
             biasReference,
             biasMemory,
             precision,
-            NOutput + N,
+            NOutput + NumberOfHidden * N,
             "Bias after optimization differ"))
         return_value = 1;
 
