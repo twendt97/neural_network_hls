@@ -208,23 +208,6 @@ int main(void)
     // Eigen::Matrix<NN_DataType, KInput, NOutput, Eigen::RowMajor> eigenWeightsTranspAfterOpti(net->connections[0]->weights->data);
     // Eigen::Matrix<NN_DataType, N, 1> hiddenLayerEigen(net->layers[1]->input->data);
 
-    /*
-    for (size_t i = 0; i < KInput; i++)
-    {
-        layerResultMemory[i] = net->layers[0]->input->data[i];
-    }
-
-    for (size_t i = 0; i < N; i++)
-    {
-        layerResultMemory[KInput + i] = net->layers[1]->input->data[i];
-    }
-
-    for (size_t i = 0; i < NOutput; i++)
-    {
-        layerResultMemory[KInput + N + i] = net->layers[2]->input->data[i];
-    }
-    */
-
     unsigned int loadParameters = 1;
     unsigned int exportLayers = 1;
 
@@ -248,39 +231,21 @@ int main(void)
     checkEqualty<NN_DataType>(net->layers[1]->input->data, &layerResultMemory[KInput], precision, N, "Hidden differ");
     checkEqualty<NN_DataType>(outputEigen.data(), &layerResultMemory[KInput + N], precision, NOutput, "Outputs differ");
 
-    uz_mlp::computeOutputGradient<NN_DataType, 1, 0>(
-        NOutput,
-        K,
-        &layerResultMemory[KInput + N],
-        mnistClassesVector,
-        &layerResultMemory[KInput],
-        &weightGradientAvg[KInput * N],
-        &biasGradientAvg[N],
-        &error[N],
-        true);
-
-    uz_mlp::computeHiddenGradient<NN_DataType, 1, 0, 0>(
-        NOutput,
-        K,
-        KInput,
-        &weightMemory[KInput * N],
-        &error[N],
-        &layerResultMemory[KInput],
+    BGD(
         layerResultMemory,
-        weightGradientAvg,
-        biasGradientAvg,
-        error,
-        true);
-
-    uz_mlp::updateParameter<NN_DataType, 1>(
+        mnistClassesVector,
         weightMemory,
         biasMemory,
-        weightGradientAvg,
-        biasGradientAvg,
-        learningRate,
-        batchSize,
-        N * KInput + K * NOutput,
-        NOutput + N);
+        weightMemory,
+        biasMemory,
+        &KInput,
+        &NOutput,
+        &NumberOfHidden,
+        &N,
+        &loadParameters,
+        &batchSize,
+        &learningRate
+    );
 
     // test accuracy of network after training
     // std::cout << "Accuracy is of Cranium training is " << accuracy(net, cranTrainingData, cranTrainingClasses) << std::endl

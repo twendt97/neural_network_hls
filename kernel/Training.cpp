@@ -50,7 +50,7 @@ void BGD(
     }
 
     // copy volatile parameters
-    memcpy(bramClasses, axiClassesInput, *batchSize * sizeof(NN_DataType));
+    memcpy(bramClasses, axiClassesInput, *batchSize * *numberOutputs * sizeof(NN_DataType));
     memcpy(
         bramMlpResults,
         axiMlpResultsInput,
@@ -68,9 +68,9 @@ void BGD(
         computeOutputGradient<NN_DataType, ParEntriesOutput, streamDepth>(
             *numberOutputs,
             *numberNeurons,
-            &currentResults[*numberLayers * *numberNeurons],
+            &currentResults[*numberInputs + *numberLayers * *numberNeurons],
             currentClasses,
-            &currentResults[(*numberLayers - 1) * *numberNeurons],
+            &currentResults[*numberInputs + (*numberLayers - 1) * *numberNeurons],
             &bramWeightGradientAvg[(*numberInputs + (*numberLayers - 1) * *numberNeurons) * *numberNeurons],
             &bramBiasGradientAvg[*numberLayers * *numberNeurons],
             bramError0,
