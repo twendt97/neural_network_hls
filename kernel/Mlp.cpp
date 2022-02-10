@@ -103,7 +103,7 @@ HIDDEN:
     if (*exportLayers != 0)
     {
         copyArray<NN_DataType, 1>(layerBuffer0, &bramLayerResults[*numberInputs + *numberLayers * *numberNeurons], *numberOutputs);
-        memcpy(bramLayerResults, axiLayerOutput, (*numberInputs + *numberNeurons * *numberLayers + *numberOutputs) * sizeof(NN_DataType));
+        memcpy(axiLayerOutput, bramLayerResults, (*numberInputs + *numberNeurons * *numberLayers + *numberOutputs) * sizeof(NN_DataType));
     }
 
     memcpy(output, layerBuffer0, *numberOutputs * sizeof(NN_DataType));

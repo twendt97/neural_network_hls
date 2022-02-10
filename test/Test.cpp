@@ -76,6 +76,7 @@ int main(void)
     NN_DataType *weightGradientAvg = (NN_DataType *)malloc(weightBufferSize * sizeof(NN_DataType));
     NN_DataType *biasGradientAvg = (NN_DataType *)malloc(biasBufferSize * sizeof(NN_DataType));
     NN_DataType *error = (NN_DataType *)malloc((NOutput + N) * sizeof(NN_DataType));
+    NN_DataType *output = (NN_DataType *)malloc(NOutput * sizeof(NN_DataType));
 
     Activation hiddenActivation[NumberOfHidden];
     size_t hiddenSize[NumberOfHidden];
@@ -207,6 +208,7 @@ int main(void)
     // Eigen::Matrix<NN_DataType, KInput, NOutput, Eigen::RowMajor> eigenWeightsTranspAfterOpti(net->connections[0]->weights->data);
     // Eigen::Matrix<NN_DataType, N, 1> hiddenLayerEigen(net->layers[1]->input->data);
 
+    /*
     for (size_t i = 0; i < KInput; i++)
     {
         layerResultMemory[i] = net->layers[0]->input->data[i];
@@ -221,10 +223,30 @@ int main(void)
     {
         layerResultMemory[KInput + N + i] = net->layers[2]->input->data[i];
     }
+    */
 
+    unsigned int loadParameters = 1;
+    unsigned int exportLayers = 1;
+
+    MLP(
+        mnistTrainScaledImages,
+        output,
+        weightMemory,
+        biasMemory,
+        layerResultMemory,
+        &KInput,
+        &NOutput,
+        &NumberOfHidden,
+        &N,
+        &loadParameters,
+        &exportLayers
+    );
+
+    Eigen::Matrix<NN_DataType, NOutput, 1> outputReferenceEigen(net->layers[2]->input->data), outputEigen(output);
+    assert(outputReferenceEigen.isApprox(outputEigen));
     checkEqualty<NN_DataType>(net->layers[0]->input->data, layerResultMemory, precision, KInput, "Inputs differ");
     checkEqualty<NN_DataType>(net->layers[1]->input->data, &layerResultMemory[KInput], precision, N, "Hidden differ");
-    checkEqualty<NN_DataType>(net->layers[2]->input->data, &layerResultMemory[KInput + N], precision, NOutput, "Outputs differ");
+    checkEqualty<NN_DataType>(outputEigen.data(), &layerResultMemory[KInput + N], precision, NOutput, "Outputs differ");
 
     uz_mlp::computeOutputGradient<NN_DataType, 1, 0>(
         NOutput,
@@ -401,6 +423,7 @@ int main(void)
     // free(weightGradientAvg);
     // free(biasGradientAvg);
     // free(error);
+    free(output);
 
     if (return_value == 0)
         std::cout << "Test successful!!!" << std::endl
