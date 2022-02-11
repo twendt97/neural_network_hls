@@ -65,7 +65,7 @@ void BGD(
         currentClasses = &bramClasses[i * *numberOutputs];
         bool initZero = (i == 0);
 
-        computeOutputGradient<NN_DataType, ParEntriesOutput, streamDepth>(
+        computeOutputGradient<NN_DataType, ParEntries, streamDepth>(
             *numberOutputs,
             *numberNeurons,
             &currentResults[*numberInputs + *numberLayers * *numberNeurons],
@@ -76,7 +76,7 @@ void BGD(
             bramError0,
             initZero);
 
-        copyArray<NN_DataType, ParEntriesOutput>(
+        copyArray<NN_DataType, ParEntries>(
             bramError0,
             bramError1,
             *numberOutputs);
@@ -98,14 +98,14 @@ void BGD(
                 bramError0,
                 initZero);
 
-            copyArray<NN_DataType, ParEntriesOutput>(
+            copyArray<NN_DataType, ParEntries>(
                 bramError0,
                 bramError1,
                 *numberNeurons);
         }
 
         unsigned int l_n = *numberLayers > 1 ? *numberNeurons : *numberOutputs;
-        computeHiddenGradient<NN_DataType, ParEntriesInput, logParEntriesInput, streamDepth>(
+        computeHiddenGradient<NN_DataType, ParEntries, logParEntries, streamDepth>(
             l_n,
             *numberNeurons,
             *numberInputs,

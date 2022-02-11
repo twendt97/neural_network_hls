@@ -62,7 +62,7 @@ void MLP(
     if (*exportLayers != 0)
         copyArray<NN_DataType, 1>(inputData, bramLayerResults, *numberInputs);
 
-    inputLayer<NN_DataType, ParEntriesInput, logParEntriesInput>(
+    processLayer<NN_DataType, ParEntries, logParEntries>(
         bramWeight,
         inputData,
         bramBias,

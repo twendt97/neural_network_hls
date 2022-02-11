@@ -147,7 +147,7 @@ int main(void)
 
     std::cout << "Extracting MNIST dataset..." << std::endl
               << std::flush;
-    auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("/home/thilo/master_thesis_code/uz_neural_network_hls_refactor/MNIST_Extractor", 1, 1);
+    auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("/home/thilo/master_thesis_code/uz_neural_network_hls_refactor/MNIST_Extractor", 20, 20);
     std::size_t numberImages, imageSize, numberLabels;
     numberImages = mnistDataSet.training_images.size();
     numberLabels = mnistDataSet.training_labels.size();
@@ -158,15 +158,15 @@ int main(void)
     assert(mnistTrainScaledImages != NULL);
     scaleImages<NN_DataType>(mnistDataSet, mnistTrainScaledImages);
 
-    NN_DataType *mnistClassesVector = (NN_DataType *)malloc(numberLabels * numberOutputs * sizeof(NN_DataType));
+    NN_DataType *mnistClassesVector = (NN_DataType *)malloc(numberLabels * NOutput * sizeof(NN_DataType));
     assert(mnistClassesVector != NULL);
-    createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, numberOutputs);
+    createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, NOutput);
 
     NN_DataType **craniumInputImages = createCraniumInputArray<NN_DataType>(mnistTrainScaledImages, numberImages, imageSize);
-    NN_DataType **craniumClasses = createCraniumInputArray<NN_DataType>(mnistClassesVector, numberLabels, numberOutputs);
+    NN_DataType **craniumClasses = createCraniumInputArray<NN_DataType>(mnistClassesVector, numberLabels, NOutput);
 
     DataSet *cranTrainingData = createDataSet(numberImages, imageSize, craniumInputImages);
-    DataSet *cranTrainingClasses = createDataSet(numberLabels, numberOutputs, craniumClasses);
+    DataSet *cranTrainingClasses = createDataSet(numberLabels, NOutput, craniumClasses);
 
     extractCraniumWeights(
         &weightMemory[N * KInput],
@@ -204,48 +204,11 @@ int main(void)
 
     std::cout << "Running optimization with hardware implementation..." << std::endl
               << std::flush;
-    // Eigen::Matrix<NN_DataType, NOutput, 1> eigenBiasAfterOpti(net->connections[0]->bias->data);
-    // Eigen::Matrix<NN_DataType, KInput, NOutput, Eigen::RowMajor> eigenWeightsTranspAfterOpti(net->connections[0]->weights->data);
-    // Eigen::Matrix<NN_DataType, N, 1> hiddenLayerEigen(net->layers[1]->input->data);
-
-    unsigned int loadParameters = 1;
-    unsigned int exportLayers = 1;
-
-    MLP(
-        mnistTrainScaledImages,
-        output,
-        weightMemory,
-        biasMemory,
-        layerResultMemory,
-        &KInput,
-        &NOutput,
-        &NumberOfHidden,
-        &N,
-        &loadParameters,
-        &exportLayers
-    );
-
-    BGD(
-        layerResultMemory,
-        mnistClassesVector,
-        weightMemory,
-        biasMemory,
-        weightMemory,
-        biasMemory,
-        &KInput,
-        &NOutput,
-        &NumberOfHidden,
-        &N,
-        &loadParameters,
-        &batchSize,
-        &learningRate
-    );
 
     // test accuracy of network after training
     // std::cout << "Accuracy is of Cranium training is " << accuracy(net, cranTrainingData, cranTrainingClasses) << std::endl
     //          << std::flush;
 
-    /*
     testBGD(
         mnistTrainScaledImages,
         weightMemory,
@@ -257,8 +220,7 @@ int main(void)
         &N,
         &batchSize,
         &learningRate,
-        maxIters);
-        */
+        1);
 
     if (checkEqualty<NN_DataType>(
             weightReference,
