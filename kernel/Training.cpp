@@ -31,7 +31,6 @@ void BGD(
     NN_DataType bramMlpResults[maxSamples * (NumberOfHidden * N + NOutput + KInput)];
     NN_DataType bramError0[N], bramError1[N];
     NN_DataType *currentResults, *currentClasses;
-    hls::stream<typename xf::blas::WideType<NN_DataType, ParEntries>::t_TypeInt> prevLayerOutputStream;
 
     if (*loadParameters != 0)
     {

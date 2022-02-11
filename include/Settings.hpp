@@ -16,10 +16,6 @@ constexpr unsigned biasBufferSize = NumberOfHidden * N + NOutput;
 // is the same
 constexpr unsigned ParEntries = 16;
 constexpr unsigned logParEntries = 4;
-// constexpr unsigned ParEntriesInput = ParEntries;
-// constexpr unsigned logParEntriesInput = logParEntries;
-constexpr unsigned ParEntriesOutput = 2;
-constexpr unsigned logParEntriesOutput = 1;
 constexpr unsigned streamDepth = 16;
 
 // Training

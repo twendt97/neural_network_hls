@@ -1,6 +1,6 @@
 // defines for compilation behavior
 // #define TEST_MLP_CRANIUM
-#define TEST_TRAINING
+// #define TEST_TRAINING
 // #define TEST_TRAINING_COMPONENTS
 
 #include "Settings.hpp"
