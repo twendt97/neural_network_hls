@@ -23,6 +23,21 @@ void BGD(
     const unsigned int *batchSize,
     const NN_DataType *learningRate)
 {
+#pragma HLS INTERFACE m_axi port = axiMlpResultsInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * maxSamples * (NumberOfHidden * N + NOutput + KInput)
+#pragma HLS INTERFACE m_axi port = axiClassesInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * maxSamples * NOutput
+#pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K
+#pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * NumberOfHidden * N + NOutput
+#pragma HLS INTERFACE m_axi port = axiWeightOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = 2 * KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K
+#pragma HLS INTERFACE m_axi port = axiBiasOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = 2 * NumberOfHidden * N + NOutput
+#pragma HLS INTERFACE s_axilite port = return
+#pragma HLS INTERFACE s_axilite port = numberInputs
+#pragma HLS INTERFACE s_axilite port = numberOutputs
+#pragma HLS INTERFACE s_axilite port = numberLayers
+#pragma HLS INTERFACE s_axilite port = numberNeurons
+#pragma HLS INTERFACE s_axilite port = loadParameters
+#pragma HLS INTERFACE s_axilite port = batchSize
+#pragma HLS INTERFACE s_axilite port = learningRate
+
     static NN_DataType bramWeight[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];
     static NN_DataType bramBias[NumberOfHidden * N + NOutput];
     static NN_DataType bramWeightGradientAvg[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];
