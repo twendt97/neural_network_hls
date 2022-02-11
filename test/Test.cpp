@@ -176,7 +176,7 @@ int main(void)
         &biasMemory[NumberOfHidden * N],
         net);
 
-    std::cout << "Running optimzation with Cranium..." << std::endl
+    std::cout << "Running optimization with Cranium..." << std::endl
               << std::flush;
     // train network with cross-entropy loss using Mini-Batch SGD
     ParameterSet params;
@@ -220,7 +220,7 @@ int main(void)
         &N,
         &batchSize,
         &learningRate,
-        1);
+        maxIters);
 
     if (checkEqualty<NN_DataType>(
             weightReference,

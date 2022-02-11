@@ -26,6 +26,6 @@ constexpr unsigned streamDepth = 16;
 constexpr unsigned maxSamples = 20;
 constexpr unsigned batchSize = 20;
 constexpr NN_DataType learningRate = 3;
-constexpr unsigned maxIters = 1;
+constexpr unsigned maxIters = 100;
 
 constexpr NN_DataType precision = 1e-3;
