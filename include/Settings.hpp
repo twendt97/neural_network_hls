@@ -3,12 +3,12 @@
 using NN_DataType = float;
 
 // parameters
-constexpr unsigned N = 16; //  Rows of A aka weight Matrix
+constexpr unsigned N = 4; //  Rows of A aka weight Matrix
 constexpr unsigned K = N;  //  Cols of A and Rows of Input Vector
 
-constexpr unsigned KInput = 784;
-constexpr unsigned NOutput = 16;
-constexpr unsigned NumberOfHidden = 4;
+constexpr unsigned KInput = 4;
+constexpr unsigned NOutput = 2;
+constexpr unsigned NumberOfHidden = 2;
 constexpr unsigned weightBufferSize = N * KInput + (NumberOfHidden - 1) * N * K + NOutput * K;
 constexpr unsigned biasBufferSize = NumberOfHidden * N + NOutput;
 
@@ -20,9 +20,9 @@ constexpr unsigned streamDepth = 16;
 
 // Training
 constexpr unsigned maxSamples = 20;
-constexpr unsigned batchSize = 5;
-constexpr NN_DataType learningRate = 3;
-constexpr unsigned maxIters = 1;
+constexpr unsigned batchSize = 4;
+constexpr NN_DataType learningRate = 0.5;
+constexpr unsigned maxIters = 2000;
 
 constexpr NN_DataType precision = 1e-3;
 

@@ -148,22 +148,26 @@ int main(void)
 
 #ifdef TEST_TRAINING
 
-    std::cout << "Extracting MNIST dataset..." << std::endl
-              << std::flush;
-    auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>(projectPath + "MNIST_Extractor", 5, 5);
-    std::size_t numberImages, imageSize, numberLabels;
-    numberImages = mnistDataSet.training_images.size();
-    numberLabels = mnistDataSet.training_labels.size();
-    assert(numberImages == numberLabels);
-    imageSize = mnistDataSet.training_images.data()->size();
+    // std::cout << "Extracting MNIST dataset..." << std::endl
+    //           << std::flush;
+    // auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>(projectPath + "MNIST_Extractor", 5, 5);
+    // std::size_t numberImages, imageSize, numberLabels;
+    // numberImages = mnistDataSet.training_images.size();
+    // numberLabels = mnistDataSet.training_labels.size();
+    // assert(numberImages == numberLabels);
+    // imageSize = mnistDataSet.training_images.data()->size();
 
-    NN_DataType *mnistTrainScaledImages = (NN_DataType *)malloc(numberImages * imageSize * sizeof(NN_DataType));
-    assert(mnistTrainScaledImages != NULL);
-    scaleImages<NN_DataType>(mnistDataSet, mnistTrainScaledImages);
+    // NN_DataType *mnistTrainScaledImages = (NN_DataType *)malloc(numberImages * imageSize * sizeof(NN_DataType));
+    // assert(mnistTrainScaledImages != NULL);
+    // scaleImages<NN_DataType>(mnistDataSet, mnistTrainScaledImages);
 
-    NN_DataType *mnistClassesVector = (NN_DataType *)malloc(numberLabels * NOutput * sizeof(NN_DataType));
-    assert(mnistClassesVector != NULL);
-    createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, NOutput);
+    // NN_DataType *mnistClassesVector = (NN_DataType *)malloc(numberLabels * NOutput * sizeof(NN_DataType));
+    // assert(mnistClassesVector != NULL);
+    // createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, NOutput);
+
+    NN_DataType *xorTrainingData = (NN_DataType *)malloc(pow(2, KInput) * KInput * sizeof(NN_DataType));
+    NN_DataType *xorTrainingClasses = (NN_DataType *)malloc(pow(2, KInput) * NOutput * sizeof(NN_DataType));
+    createXorTrainingData<NN_DataType>(xorTrainingData, xorTrainingClasses, KInput, NOutput);
 
 #ifdef EXPORT_MNIST
     std::ofstream mnistCsv;
@@ -171,7 +175,7 @@ int main(void)
     for (size_t i = 0; i < numberImages * imageSize; i++)
     {
         mnistCsv << mnistTrainScaledImages[i];
-        if(i < numberImages * imageSize - 1)
+        if (i < numberImages * imageSize - 1)
             mnistCsv << ",";
     }
 
@@ -181,7 +185,7 @@ int main(void)
     for (size_t i = 0; i < numberLabels * NOutput; i++)
     {
         mnistCsv << mnistClassesVector[i];
-        if(i < numberLabels * NOutput - 1)
+        if (i < numberLabels * NOutput - 1)
             mnistCsv << ",";
     }
 
@@ -189,11 +193,12 @@ int main(void)
     mnistCsv.close();
 #endif
 
-    NN_DataType **craniumInputImages = createCraniumInputArray<NN_DataType>(mnistTrainScaledImages, numberImages, imageSize);
-    NN_DataType **craniumClasses = createCraniumInputArray<NN_DataType>(mnistClassesVector, numberLabels, NOutput);
+    NN_DataType **craniumTrainingData = createCraniumInputArray<NN_DataType>(xorTrainingData, pow(2, KInput), KInput);
+    NN_DataType **craniumClasses = createCraniumInputArray<NN_DataType>(xorTrainingClasses, pow(2, KInput), NOutput);
+    
 
-    DataSet *cranTrainingData = createDataSet(numberImages, imageSize, craniumInputImages);
-    DataSet *cranTrainingClasses = createDataSet(numberLabels, NOutput, craniumClasses);
+    DataSet *cranTrainingData = createDataSet(pow(2, KInput), KInput, craniumTrainingData);
+    DataSet *cranTrainingClasses = createDataSet(pow(2, KInput), NOutput, craniumClasses);
 
     extractCraniumWeights(
         &weightMemory[N * KInput],
@@ -211,14 +216,14 @@ int main(void)
     params.data = cranTrainingData;
     params.classes = cranTrainingClasses;
     params.lossFunction = MEAN_SQUARED_ERROR;
-    params.batchSize = batchSize;
+    params.batchSize = cranTrainingData->rows;
     params.learningRate = learningRate;
     params.searchTime = 0;
     params.regularizationStrength = 0;
     params.momentumFactor = 0;
     params.maxIters = maxIters;
     params.shuffle = 0;
-    params.verbose = 0;
+    params.verbose = 1;
     optimize(params);
 
     extractCraniumWeights(
@@ -233,42 +238,56 @@ int main(void)
               << std::flush;
 
     // test accuracy of network after training
-    // std::cout << "Accuracy is of Cranium training is " << accuracy(net, cranTrainingData, cranTrainingClasses) << std::endl
-    //          << std::flush;
+    std::cout << "Accuracy of Cranium training is " << accuracy(net, cranTrainingData, cranTrainingClasses) << std::endl
+              << std::flush;
 
-    testBGD(
-        mnistTrainScaledImages,
-        weightMemory,
-        biasMemory,
-        mnistClassesVector,
-        &KInput,
-        &NOutput,
-        &NumberOfHidden,
-        &N,
-        &batchSize,
-        &learningRate,
-        maxIters);
+    for (size_t i = 0; i < pow(2, KInput); i++)
+    {
+        forwardPass(net, createMatrix(1, KInput, craniumTrainingData[i]));
+        Matrix *cranOutput = getOuput(net);
+        for (std::size_t j = 0; j < cranOutput->cols; j++)
+        {
+            std::cout << getMatrix(cranOutput, 0, j) << " ";
+        }
 
-    if (checkEqualty<NN_DataType>(
-            weightReference,
-            weightMemory,
-            precision,
-            N * KInput + (NumberOfHidden - 1) * N * K + K * NOutput,
-            "Weights after optimization differ"))
-        return_value = 1;
+        std::cout << std::endl
+                  << std::flush;
+    }
 
-    if (checkEqualty<NN_DataType>(
-            biasReference,
-            biasMemory,
-            precision,
-            NOutput + NumberOfHidden * N,
-            "Bias after optimization differ"))
-        return_value = 1;
+    // testBGD(
+    //     mnistTrainScaledImages,
+    //     weightMemory,
+    //     biasMemory,
+    //     mnistClassesVector,
+    //     &KInput,
+    //     &NOutput,
+    //     &NumberOfHidden,
+    //     &N,
+    //     &batchSize,
+    //     &learningRate,
+    //     maxIters);
 
-    free(mnistTrainScaledImages);
-    free(mnistClassesVector);
-    free(craniumInputImages);
+    // if (checkEqualty<NN_DataType>(
+    //         weightReference,
+    //         weightMemory,
+    //         precision,
+    //         N * KInput + (NumberOfHidden - 1) * N * K + K * NOutput,
+    //         "Weights after optimization differ"))
+    //     return_value = 1;
+
+    // if (checkEqualty<NN_DataType>(
+    //         biasReference,
+    //         biasMemory,
+    //         precision,
+    //         NOutput + NumberOfHidden * N,
+    //         "Bias after optimization differ"))
+    //     return_value = 1;
+
+    // free(mnistTrainScaledImages);
+    // free(mnistClassesVector);
+    free(craniumTrainingData);
     free(craniumClasses);
+    destroyTrainingData<NN_DataType>(xorTrainingData, xorTrainingClasses);
 
 #endif
 
