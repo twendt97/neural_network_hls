@@ -1,6 +1,7 @@
 // defines for compilation behavior
 // #define TEST_MLP_CRANIUM
-// #define TEST_TRAINING
+#define TEST_TRAINING
+// #define EXPORT_MNIST
 // #define TEST_TRAINING_COMPONENTS
 
 #include "Settings.hpp"
@@ -12,6 +13,7 @@
 #include <random>
 #include <stdlib.h>
 #include <stdint.h>
+#include <fstream>
 
 #include "MNIST_Extractor/include/mnist/mnist_reader.hpp"
 
@@ -88,6 +90,7 @@ int main(void)
     }
 
     Network *net = createNetwork(KInput, NumberOfHidden, hiddenSize, hiddenActivation, NOutput, linear);
+    std::string projectPath(projectPathString);
 
 #ifdef TEST_MLP_CRANIUM
 
@@ -147,7 +150,7 @@ int main(void)
 
     std::cout << "Extracting MNIST dataset..." << std::endl
               << std::flush;
-    auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>("/home/thilo/master_thesis_code/uz_neural_network_hls_refactor/MNIST_Extractor", 20, 20);
+    auto mnistDataSet = mnist::read_dataset<std::vector, std::vector, uint8_t, uint8_t>(projectPath + "MNIST_Extractor", 5, 5);
     std::size_t numberImages, imageSize, numberLabels;
     numberImages = mnistDataSet.training_images.size();
     numberLabels = mnistDataSet.training_labels.size();
@@ -161,6 +164,30 @@ int main(void)
     NN_DataType *mnistClassesVector = (NN_DataType *)malloc(numberLabels * NOutput * sizeof(NN_DataType));
     assert(mnistClassesVector != NULL);
     createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, NOutput);
+
+#ifdef EXPORT_MNIST
+    std::ofstream mnistCsv;
+    mnistCsv.open(projectPath + "export/mnist_data.csv");
+    for (size_t i = 0; i < numberImages * imageSize; i++)
+    {
+        mnistCsv << mnistTrainScaledImages[i];
+        if(i < numberImages * imageSize - 1)
+            mnistCsv << ",";
+    }
+
+    mnistCsv << std::flush;
+    mnistCsv.close();
+    mnistCsv.open(projectPath + "export/mnist_labels.csv");
+    for (size_t i = 0; i < numberLabels * NOutput; i++)
+    {
+        mnistCsv << mnistClassesVector[i];
+        if(i < numberLabels * NOutput - 1)
+            mnistCsv << ",";
+    }
+
+    mnistCsv << std::flush;
+    mnistCsv.close();
+#endif
 
     NN_DataType **craniumInputImages = createCraniumInputArray<NN_DataType>(mnistTrainScaledImages, numberImages, imageSize);
     NN_DataType **craniumClasses = createCraniumInputArray<NN_DataType>(mnistClassesVector, numberLabels, NOutput);

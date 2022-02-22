@@ -20,8 +20,11 @@ constexpr unsigned streamDepth = 16;
 
 // Training
 constexpr unsigned maxSamples = 20;
-constexpr unsigned batchSize = 20;
+constexpr unsigned batchSize = 5;
 constexpr NN_DataType learningRate = 3;
 constexpr unsigned maxIters = 1;
 
 constexpr NN_DataType precision = 1e-3;
+
+// General
+constexpr char *projectPathString = "/home/thilo/master_thesis_code/uz_neural_network_hls_refactor/";

@@ -26,13 +26,13 @@ void MLP(
 #pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * (KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K)
 #pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * (NumberOfHidden * N + NOutput)
 #pragma HLS INTERFACE m_axi port = axiLayerOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = 2 * (KInput + NumberOfHidden * N + NOutput)
-#pragma HLS INTERFACE s_axilite port = return bundle = configuration
-#pragma HLS INTERFACE s_axilite port = numberInputs bundle = configuration
-#pragma HLS INTERFACE s_axilite port = numberOutputs bundle = configuration
-#pragma HLS INTERFACE s_axilite port = numberLayers bundle = configuration
-#pragma HLS INTERFACE s_axilite port = numberNeurons bundle = configuration
-#pragma HLS INTERFACE s_axilite port = loadParameters bundle = configuration
-#pragma HLS INTERFACE s_axilite port = exportLayers bundle = configuration
+#pragma HLS INTERFACE s_axilite port = return
+#pragma HLS INTERFACE s_axilite port = numberInputs
+#pragma HLS INTERFACE s_axilite port = numberOutputs
+#pragma HLS INTERFACE s_axilite port = numberLayers
+#pragma HLS INTERFACE s_axilite port = numberNeurons
+#pragma HLS INTERFACE s_axilite port = loadParameters
+#pragma HLS INTERFACE s_axilite port = exportLayers
 
     // the size of theses buffers determine the maximum size of the neural network to be processed
     static NN_DataType bramWeight[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];

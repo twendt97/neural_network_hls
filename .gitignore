@@ -3,3 +3,4 @@ build*
 scan
 proj*
 *.log
+export

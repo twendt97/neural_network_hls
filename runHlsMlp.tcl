@@ -33,13 +33,12 @@ open_solution -reset solution1
 # Define technology and clock rate
 set_part  {xczu9eg-ffvc900-1-e}
 create_clock -period 10
-config_interface -m_axi_addr64=0
 
 # Source x_hls.tcl to determine which steps to execute
-set hls_exec 2
+set hls_exec 3
 csim_design
 # Set any optimization directives
-# set_directive_pipeline loop_pipeline/LOOP_J
+config_interface -m_axi_addr64=0
 # End of directives
 
 if {$hls_exec == 1} {
