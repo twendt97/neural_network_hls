@@ -1,12 +1,12 @@
 // defines for compilation behavior
-// #define TEST_MLP_CRANIUM
-#define TEST_TRAINING
+#define TEST_MLP_CRANIUM
+// #define TEST_TRAINING
 // #define EXPORT_MNIST
 // #define TEST_TRAINING_COMPONENTS
 
 #include "Settings.hpp"
 #include "Simulation.hpp"
-#include "KernelHelper.hpp"
+//#include "KernelHelper.hpp"
 #include <vector>
 #include <algorithm>
 #include <iostream>
@@ -68,81 +68,10 @@ int main(void)
     int return_value = 0;
     srand((unsigned int)2);
 
-    // memory allocation
-    // Make sure that biases and weights are in a consistent memory location
-    NN_DataType *weightMemory = (NN_DataType *)malloc(weightBufferSize * sizeof(NN_DataType));
-    NN_DataType *biasMemory = (NN_DataType *)malloc(biasBufferSize * sizeof(NN_DataType));
-    NN_DataType *layerResultMemory = (NN_DataType *)malloc((KInput + NumberOfHidden * N + NOutput) * sizeof(NN_DataType));
-    NN_DataType *weightReference = (NN_DataType *)malloc(weightBufferSize * sizeof(NN_DataType));
-    NN_DataType *biasReference = (NN_DataType *)malloc(biasBufferSize * sizeof(NN_DataType));
-    NN_DataType *weightGradientAvg = (NN_DataType *)malloc(weightBufferSize * sizeof(NN_DataType));
-    NN_DataType *biasGradientAvg = (NN_DataType *)malloc(biasBufferSize * sizeof(NN_DataType));
-    NN_DataType *error = (NN_DataType *)malloc((NOutput + N) * sizeof(NN_DataType));
-    NN_DataType *output = (NN_DataType *)malloc(NOutput * sizeof(NN_DataType));
-
-    Activation hiddenActivation[NumberOfHidden];
-    size_t hiddenSize[NumberOfHidden];
-
-    for (unsigned int i = 0; i < NumberOfHidden; i++)
-    {
-        hiddenActivation[i] = sigmoid;
-        hiddenSize[i] = N;
-    }
-
-    Network *net = createNetwork(KInput, NumberOfHidden, hiddenSize, hiddenActivation, NOutput, linear);
-    std::string projectPath(projectPathString);
-
 #ifdef TEST_MLP_CRANIUM
-
-    extractCraniumWeights(
-        &weightMemory[N * KInput],
-        weightMemory,
-        &weightMemory[N * KInput + (NumberOfHidden - 1) * N * K],
-        biasMemory,
-        &biasMemory[NumberOfHidden * N],
-        net);
-
-    std::cout << "Testing hardware implementation of MLP against software implemenation of Cranium..." << std::endl
-              << std::flush;
-
-    NN_InputVector inputEigen;
-    inputEigen.setRandom();
-    Matrix *inputCran = createMatrix(1, KInput, (float *)inputEigen.data());
-    forwardPass(net, inputCran);
-
-    NN_OutputVector resultReference(getOuput(net)->data);
-    NN_OutputVector result;
-
-    for (std::size_t i = 0; i < 2; i++)
-    {
-        unsigned int loadParameters = i == 0 ? 1 : 0;
-        unsigned int exportLayers = 1;
-
-        MLP(
-            inputEigen.data(),
-            result.data(),
-            weightMemory,
-            biasMemory,
-            weightMemory,
-            &KInput,
-            &NOutput,
-            &NumberOfHidden,
-            &N,
-            &loadParameters,
-            &exportLayers);
-    }
-
-    if (result.isApprox(resultReference))
-    {
-        std::cout << "Hardware produces the same results as software" << std::endl
-                  << std::flush;
-    }
-    else
-    {
-        std::cout << "Hardware and software results differ" << std::endl
-                  << std::flush;
-        return_value = 1;
-    }
+    MlpContainer *mlp = new MlpContainer(NUMBER_NEURONS, NUMBER_HIDDEN, NUMBER_INPUTS, NUMBER_OUTPUTS);
+    mlp->testHwAgainstReference(1e-3);
+    delete mlp;
 
 #endif
 
@@ -254,34 +183,34 @@ int main(void)
                   << std::flush;
     }
 
-    // testBGD(
-    //     mnistTrainScaledImages,
-    //     weightMemory,
-    //     biasMemory,
-    //     mnistClassesVector,
-    //     &KInput,
-    //     &NOutput,
-    //     &NumberOfHidden,
-    //     &N,
-    //     &batchSize,
-    //     &learningRate,
-    //     maxIters);
+    testBGD(
+        xorTrainingData,
+        weightMemory,
+        biasMemory,
+        xorTrainingClasses,
+        &KInput,
+        &NOutput,
+        &NumberOfHidden,
+        &N,
+        &batchSize,
+        &learningRate,
+        maxIters);
 
-    // if (checkEqualty<NN_DataType>(
-    //         weightReference,
-    //         weightMemory,
-    //         precision,
-    //         N * KInput + (NumberOfHidden - 1) * N * K + K * NOutput,
-    //         "Weights after optimization differ"))
-    //     return_value = 1;
+    if (checkEqualty<NN_DataType>(
+            weightReference,
+            weightMemory,
+            precision,
+            N * KInput + (NumberOfHidden - 1) * N * K + K * NOutput,
+            "Weights after optimization differ"))
+        return_value = 1;
 
-    // if (checkEqualty<NN_DataType>(
-    //         biasReference,
-    //         biasMemory,
-    //         precision,
-    //         NOutput + NumberOfHidden * N,
-    //         "Bias after optimization differ"))
-    //     return_value = 1;
+    if (checkEqualty<NN_DataType>(
+            biasReference,
+            biasMemory,
+            precision,
+            NOutput + NumberOfHidden * N,
+            "Bias after optimization differ"))
+        return_value = 1;
 
     // free(mnistTrainScaledImages);
     // free(mnistClassesVector);
@@ -382,15 +311,12 @@ int main(void)
 
 #endif
     // destroyNetwork(net);
-    free(weightMemory);
-    free(biasMemory);
     // free(layerResultMemory);
     // free(weightReference);
     // free(biasReference);
     // free(weightGradientAvg);
     // free(biasGradientAvg);
     // free(error);
-    free(output);
 
     if (return_value == 0)
         std::cout << "Test successful!!!" << std::endl
@@ -534,7 +460,7 @@ void testBGD(
         {
             unsigned int loadParametersMlp = i == 0 ? (unsigned int)1 : (unsigned int)0;
             MLP(
-                &input[*numberInputs * (iter + i)],
+                &input[*numberInputs * i],
                 outputBuffer,
                 weight,
                 bias,
