@@ -4,10 +4,10 @@
 using NN_DataType = float;
 
 // parameters
-constexpr unsigned N = 4; //  Rows of A aka weight Matrix
+constexpr unsigned N = 16; //  Rows of A aka weight Matrix
 constexpr unsigned K = N;  //  Cols of A and Rows of Input Vector
 
-constexpr unsigned KInput = 4;
+constexpr unsigned KInput = 8;
 constexpr unsigned NOutput = 4;
 constexpr unsigned NumberOfHidden = 2;
 constexpr unsigned weightBufferSize = N * KInput + (NumberOfHidden - 1) * N * K + NOutput * K;
@@ -29,7 +29,7 @@ constexpr unsigned streamDepth = 16;
 constexpr unsigned maxSamples = 20;
 constexpr unsigned batchSize = 16;
 constexpr NN_DataType learningRate = 0.5;
-constexpr unsigned maxIters = 2000;
+constexpr unsigned epochs = 2000;
 
 // General
 // constexpr char *projectPathString = "/home/thilo/master_thesis_code/uz_neural_network_hls_refactor/";

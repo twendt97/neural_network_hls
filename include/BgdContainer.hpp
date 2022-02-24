@@ -44,6 +44,8 @@ private:
 
     std::size_t numberTrainingSamples;
     std::size_t epochs;
+    std::size_t batchSize;
+    NN_DataType learningRate;
 
     void updateBufferSizes(void);
     void createTruthTableAsTrainingData(void);
@@ -54,9 +56,6 @@ private:
     std::size_t hardwarePrediction(void);
 
 public:
-    std::size_t batchSize;
-    NN_DataType learningRate;
-
     BgdContainer(
         std::size_t numberNeurons,
         std::size_t numberHiddenLayers,
@@ -103,7 +102,7 @@ BgdContainer::BgdContainer(
     this->batchBuffer = (NN_DataType *)malloc(this->batchBufferSize * sizeof(NN_DataType));
     this->outputAddress = (NN_DataType *)malloc(this->numberOutputs * sizeof(NN_DataType));
     // just allocate some memory so it can be freed later
-    this->trainingData = (NN_DataType *)malloc(sizeof(NN_DataType));
+    this->trainingData = (NN_DataType *)malloc(this->numberInputs * sizeof(NN_DataType));
     this->trainingClasses = (NN_DataType *)malloc(sizeof(NN_DataType));
     this->mlpInstance = new MlpContainer(
         this->numberNeurons,
@@ -132,6 +131,7 @@ void BgdContainer::createTruthTableAsTrainingData(void)
     assert(this->numberTrainingSamples % this->batchSize == 0);
     free(this->trainingData);
     this->trainingData = (NN_DataType *)malloc(this->numberTrainingSamples * this->numberInputs * sizeof(NN_DataType));
+    this->mlpInstance->setInputAddress(this->trainingData);
     // create truth table
     for (std::size_t i = 0; i < this->numberInputs; i++)
     {
@@ -157,7 +157,6 @@ void BgdContainer::xorTruthTableToClasses(void)
         {
             if (trainingData[i * numberInputs + j] != 0)
                 numberOnes++;
-            std::cout << trainingData[i * numberInputs + j];
         }
         if (numberOnes == 1)
         {
@@ -169,8 +168,6 @@ void BgdContainer::xorTruthTableToClasses(void)
             this->trainingClasses[i * this->numberOutputs] = 0;
             this->trainingClasses[i * this->numberOutputs + 1] = 1;
         }
-        std::cout << "  " << trainingClasses[i * numberOutputs] << trainingClasses[i * numberOutputs + 1] << std::endl
-                  << std::flush;
 
         // fill remaining output entries with 0
         for (std::size_t j = 2; j < this->numberOutputs; j++)
@@ -184,25 +181,21 @@ void BgdContainer::optimizeReference(void)
 {
     NN_DataType **craniumTrainingData = (NN_DataType **)malloc(this->numberTrainingSamples * sizeof(NN_DataType *));
     NN_DataType **craniumClassesData = (NN_DataType **)malloc(this->numberTrainingSamples * sizeof(NN_DataType *));
-    NN_DataType *localTrainingData = (NN_DataType *)malloc(this->numberInputs * this->numberTrainingSamples * sizeof(NN_DataType));
-    NN_DataType *localClassesData = (NN_DataType *)malloc(this->numberOutputs * this->numberTrainingSamples * sizeof(NN_DataType));
 
     // copy training data from class because cranium will free the allocated memory
     // when calling the function destroyDataSet(...)
-    for (std::size_t i = 0; i < this->numberInputs * this->numberTrainingSamples; i++)
-    {
-        localTrainingData[i] = this->trainingData[i];
-    }
-
-    for (std::size_t i = 0; i < this->numberOutputs * this->numberTrainingSamples; i++)
-    {
-        localClassesData[i] = this->trainingClasses[i];
-    }
-
     for (std::size_t i = 0; i < this->numberTrainingSamples; i++)
     {
-        craniumTrainingData[i] = &localTrainingData[i * this->numberInputs];
-        craniumClassesData[i] = &localClassesData[i * this->numberOutputs];
+        craniumTrainingData[i] = (NN_DataType *)malloc(this->numberInputs * sizeof(NN_DataType));
+        for (std::size_t j = 0; j < this->numberInputs; j++)
+        {
+            craniumTrainingData[i][j] = this->trainingData[i * this->numberInputs + j];
+        }
+        craniumClassesData[i] = (NN_DataType *)malloc(this->numberOutputs * sizeof(NN_DataType));
+        for (std::size_t j = 0; j < this->numberOutputs; j++)
+        {
+            craniumClassesData[i][j] = this->trainingClasses[i * this->numberOutputs + j];
+        }
     }
 
     DataSet *cranTrainingDataSet = createDataSet(this->numberTrainingSamples, this->numberInputs, craniumTrainingData);
@@ -217,7 +210,7 @@ void BgdContainer::optimizeReference(void)
         .searchTime = 0,
         .regularizationStrength = 0,
         .momentumFactor = 0,
-        .maxIters = this->epochs * this->numberTrainingSamples,
+        .maxIters = (int)(this->epochs * (this->numberTrainingSamples / this->batchSize)),
         .shuffle = 0,
         .verbose = 1};
     optimize(params);
@@ -243,14 +236,14 @@ void BgdContainer::optimizeHardware(void)
     this->mlpInstance->setExportLayers(true);
     for (std::size_t i = 0; i < this->epochs; i++)
     {
-        unsigned int loadParametersBgd = i == 0 ? (unsigned int)1 : (unsigned int)0;
+        unsigned int loadParametersBgd = i == 0 ? (unsigned int)1 : (unsigned int)1;
         for (std::size_t j = 0; j < this->numberTrainingSamples / this->batchSize; j++)
         {
             this->mlpInstance->setLoadParameters(true);
             for (std::size_t k = 0; k < this->batchSize; k++)
             {
                 this->mlpInstance->setInputAddress(&this->trainingData[this->numberInputs * (j * this->batchSize + k)]);
-                this->mlpInstance->setLayerBufferAddress(&this->batchBuffer[this->batchBufferSize * k]);
+                this->mlpInstance->setLayerBufferAddress(&this->batchBuffer[this->layerBufferSize * k]);
                 this->mlpInstance->feedForward();
                 this->mlpInstance->setLoadParameters(false);
             }
@@ -280,7 +273,7 @@ std::size_t BgdContainer::hardwarePrediction(void)
     std::size_t max = 0;
     for (std::size_t i = 0; i < this->numberOutputs; i++)
     {
-        if (this->outputAddress[i] > max)
+        if (this->outputAddress[i] > this->outputAddress[max])
             max = i;
     }
     return max;
@@ -308,6 +301,9 @@ void BgdContainer::optimizeAndTest(void)
 {
     this->createTruthTableAsTrainingData();
     this->xorTruthTableToClasses();
+    std::cout << "Starting optimization of the reference implementation..." << std::endl << std::flush;
     this->optimizeReference();
+    std::cout << "Starting hardware optimization..." << std::endl << std::flush;
     this->optimizeHardware();
+    this->mlpInstance->testHwAgainstReference();
 }

@@ -173,22 +173,36 @@ void MlpContainer::feedForward()
 bool MlpContainer::testHwAgainstReference(NN_DataType precision)
 {
     float *referenceInputData = (float *)malloc(this->numberInputs * sizeof(float));
+    NN_DataType *originalInput;
+    if (this->memorySelfOrganized == false)
+    {
+        NN_DataType *originalInput = this->inputAddress;
+        this->inputAddress = (NN_DataType *)malloc(this->numberInputs * sizeof(NN_DataType));
+    }
+
     for (std::size_t i = 0; i < this->numberInputs; i++)
     {
-        this->inputAddress[i] = ((NN_DataType) (rand() % 100)) / 100.0;
-        referenceInputData[i] = (float) this->inputAddress[i];
+        this->inputAddress[i] = ((NN_DataType)(rand() % 100)) / 100.0;
+        referenceInputData[i] = (float)this->inputAddress[i];
     }
     Matrix *referenceInput = createMatrix(1, this->numberInputs, referenceInputData);
     forwardPass(this->referenceImplementation, referenceInput);
     this->feedForward();
-    
+
     Matrix *referenceOutput = getOuput(this->referenceImplementation);
     for (std::size_t i = 0; i < this->numberOutputs; i++)
     {
         assert(abs(referenceOutput->data[i] - this->outputAddress[i]) < precision);
     }
     destroyMatrix(referenceInput);
-    std::cout << "HW produces the same results as the reference implementation" << std::endl << std::flush;
+    
+    if(this->memorySelfOrganized == false)
+    {
+        free(this->inputAddress);
+        this->inputAddress = originalInput;
+    }
+    std::cout << "HW produces the same results as the reference implementation" << std::endl
+              << std::flush;
     return true;
 }
 
