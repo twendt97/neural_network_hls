@@ -4,6 +4,7 @@
 #include "ap_int.h"
 #include "hls_stream.h"
 #include "hls_math.h"
+#include "Settings.hpp"
 
 namespace uz_mlp
 {
@@ -87,7 +88,13 @@ namespace uz_mlp
         xf::blas::vec2GemStream<t_DataType, t_ParEntries>(p_n, p_k, p_input, l_strInput);
         xf::blas::readVec2Stream<t_DataType, 1>(p_bias, p_n, l_strBias);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_n, p_k, (t_DataType)1, l_strWeights, l_strInput, (t_DataType)1, l_strBias, l_strMv);
-        applyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n, uz_mlp::sigmoid<t_DataType>);
+        applyFunction<t_DataType, 1>(l_strMv, l_strOutput, p_n,
+#ifdef ACTIVATION_RELU
+                                     uz_mlp::relu<t_DataType>
+#else
+                                     uz_mlp::sigmoid<t_DataType>
+#endif
+        );
         xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutput, p_n, p_output);
     }
 
@@ -284,7 +291,13 @@ namespace uz_mlp
         uz_mlp::streamZero<t_DataType, 1>(p_k, l_strZero);
         xf::blas::gemv<t_DataType, t_logParEntries>(p_k, p_n, (t_DataType)1, l_strWeights, l_strLatterError, (t_DataType)1, l_strZero, l_strMv);
         xf::blas::readVec2Stream<t_DataType, 1>(p_outputCurrentLayer, p_k, l_strOutputCurLayer);
-        uz_mlp::applyFunction<t_DataType, 1>(l_strOutputCurLayer, l_strActivDeriv, p_k, uz_mlp::sigmoidDeriv<t_DataType>);
+        uz_mlp::applyFunction<t_DataType, 1>(l_strOutputCurLayer, l_strActivDeriv, p_k,
+#ifdef ACTIVATION_RELU
+                                             uz_mlp::reluDeriv<t_DataType>
+#else
+                                             uz_mlp::sigmoidDeriv<t_DataType>
+#endif
+        );
         uz_mlp::hadamardProduct<t_DataType, 1>(p_k, l_strMv, l_strActivDeriv, p_outputError);
         // xf::blas::writeStream2Vec<t_DataType, 1>(l_strOutputError, p_k, outputError);
     }

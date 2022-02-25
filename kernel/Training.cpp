@@ -38,13 +38,13 @@ void BGD(
 #pragma HLS INTERFACE s_axilite port = batchSize
 #pragma HLS INTERFACE s_axilite port = learningRate
 
-    static NN_DataType bramWeight[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];
-    static NN_DataType bramBias[NumberOfHidden * N + NOutput];
-    static NN_DataType bramWeightGradientAvg[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];
-    static NN_DataType bramBiasGradientAvg[NumberOfHidden * N + NOutput];
-    NN_DataType bramClasses[maxSamples * NOutput];
-    NN_DataType bramMlpResults[maxSamples * (NumberOfHidden * N + NOutput + KInput)];
-    NN_DataType bramError0[N], bramError1[N];
+    static NN_DataType bramWeight[weightBufferSize];
+    static NN_DataType bramBias[biasBufferSize];
+    static NN_DataType bramWeightGradientAvg[weightBufferSize];
+    static NN_DataType bramBiasGradientAvg[biasBufferSize];
+    NN_DataType bramClasses[maxSamples * hwNumberOutputs];
+    NN_DataType bramMlpResults[maxSamples * layerResultsBufferSize];
+    NN_DataType bramError0[layerBufferSize], bramError1[layerBufferSize];
     NN_DataType *currentResults, *currentClasses;
 
     if (*loadParameters != 0)

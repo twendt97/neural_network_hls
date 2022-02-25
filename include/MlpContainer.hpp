@@ -25,7 +25,7 @@ private:
     bool memorySelfOrganized;
     void updateBufferSizes(void);
     Network *createReferenceImplementation(void);
-    void initParametersFromReference(void);
+    void copyParametersFromReference(NN_DataType *weightAddress, NN_DataType *biasAddress);
 
 private:
     NN_DataType *weightMemory;
@@ -83,6 +83,7 @@ public:
     bool getExportLayer(void);
 
     bool testHwAgainstReference(NN_DataType precision = 1e-3);
+    bool hwParametersEqualReference(NN_DataType precision = 1e-3);
 };
 
 MlpContainer::MlpContainer(
@@ -105,7 +106,7 @@ MlpContainer::MlpContainer(
     this->outputAddress = (NN_DataType *)std::malloc(numberOutputs * sizeof(NN_DataType));
     this->memorySelfOrganized = true;
     this->referenceImplementation = this->createReferenceImplementation();
-    this->initParametersFromReference();
+    this->copyParametersFromReference(this->weightMemory, this->biasMemory);
 }
 
 MlpContainer::MlpContainer(
@@ -132,7 +133,7 @@ MlpContainer::MlpContainer(
     this->loadParameters = 1;
     this->exportLayers = 1;
     this->referenceImplementation = this->createReferenceImplementation();
-    this->initParametersFromReference();
+    this->copyParametersFromReference(this->weightMemory, this->biasMemory);
 }
 
 MlpContainer::~MlpContainer()
@@ -172,6 +173,7 @@ void MlpContainer::feedForward()
 
 bool MlpContainer::testHwAgainstReference(NN_DataType precision)
 {
+    bool returnValue = true;
     float *referenceInputData = (float *)malloc(this->numberInputs * sizeof(float));
     NN_DataType *originalInput;
     if (this->memorySelfOrganized == false)
@@ -192,18 +194,26 @@ bool MlpContainer::testHwAgainstReference(NN_DataType precision)
     Matrix *referenceOutput = getOuput(this->referenceImplementation);
     for (std::size_t i = 0; i < this->numberOutputs; i++)
     {
-        assert(abs(referenceOutput->data[i] - this->outputAddress[i]) < precision);
+        assert(abs(referenceOutput->data[i] - this->outputAddress[i]) <= precision);
+        if (abs(referenceOutput->data[i] - this->outputAddress[i]) > precision)
+            returnValue = false;
     }
     destroyMatrix(referenceInput);
-    
-    if(this->memorySelfOrganized == false)
+
+    if (this->memorySelfOrganized == false)
     {
         free(this->inputAddress);
         this->inputAddress = originalInput;
     }
-    std::cout << "HW produces the same results as the reference implementation" << std::endl
-              << std::flush;
-    return true;
+
+    if (returnValue)
+        std::cout << "HW produces the same results as the reference implementation" << std::endl
+                  << std::flush;
+    else
+        std::cout << "HW and reference results differ" << std::endl
+                  << std::flush;
+
+    return returnValue;
 }
 
 void MlpContainer::setInputAddress(NN_DataType *address)
@@ -281,22 +291,26 @@ Network *MlpContainer::createReferenceImplementation(void)
     for (std::size_t i = 0; i < this->numberHiddenLayers; i++)
     {
         hiddenSizes[i] = this->numberNeurons;
+#ifdef ACTIVATION_RELU
+        hiddenActivation[i] = relu;
+#else
         hiddenActivation[i] = sigmoid;
+#endif
     }
 
     Network *net = createNetwork(this->numberInputs, this->numberHiddenLayers, hiddenSizes, hiddenActivation, this->numberOutputs, linear);
     return net;
 }
 
-void MlpContainer::initParametersFromReference(void)
+void MlpContainer::copyParametersFromReference(NN_DataType *weightAddress, NN_DataType *biasAddress)
 {
     Network *ref = this->referenceImplementation;
     const std::size_t inputs = this->numberInputs;
     const std::size_t outputs = this->numberOutputs;
     const std::size_t hidden = this->numberHiddenLayers;
     const std::size_t neurons = this->numberNeurons;
-    NN_DataType *weightPointer = this->weightMemory;
-    NN_DataType *biasPointer = this->biasMemory;
+    NN_DataType *weightPointer = weightAddress;
+    NN_DataType *biasPointer = biasAddress;
 
     Matrix *inputWeights = createMatrixZeroes(neurons, inputs);
     transposeInto(ref->connections[0]->weights, inputWeights);
@@ -340,4 +354,40 @@ void MlpContainer::initParametersFromReference(void)
     {
         biasPointer[i] = ref->connections[hidden]->bias->data[i];
     }
+}
+
+bool MlpContainer::hwParametersEqualReference(NN_DataType precision)
+{
+    bool returnValue = true;
+    NN_DataType *refWeights = (NN_DataType *)malloc(this->weightBufferSize * sizeof(NN_DataType));
+    NN_DataType *refBias = (NN_DataType *)malloc(this->biasBufferSize * sizeof(NN_DataType));
+    this->copyParametersFromReference(refWeights, refBias);
+    for (std::size_t i = 0; i < this->weightBufferSize; i++)
+    {
+        assert(abs(refWeights[i] - this->weightMemory[i]) <= precision);
+        if (abs(refWeights[i] - this->weightMemory[i]) > precision)
+        {
+            returnValue = false;
+            break;
+        }
+    }
+
+    for (std::size_t i = 0; i < this->biasBufferSize; i++)
+    {
+        assert(abs(refBias[i] - this->biasMemory[i]) <= precision);
+        if (abs(refBias[i] - this->biasMemory[i]) > precision)
+        {
+            returnValue = false;
+            break;
+        }
+    }
+
+    if (returnValue)
+        std::cout << "Parameters of the HW implementation equal the reference implementation" << std::endl
+                  << std::flush;
+    else
+        std::cout << "Parameters of the HW implementation differ from the reference implementation" << std::endl
+                  << std::flush;
+
+    return returnValue;
 }

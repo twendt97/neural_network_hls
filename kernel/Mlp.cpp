@@ -35,11 +35,11 @@ void MLP(
 #pragma HLS INTERFACE s_axilite port = exportLayers
 
     // the size of theses buffers determine the maximum size of the neural network to be processed
-    static NN_DataType bramWeight[KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K];
-    static NN_DataType bramBias[NumberOfHidden * N + NOutput];
-    NN_DataType inputData[KInput];
-    NN_DataType layerBuffer0[N], layerBuffer1[N];
-    NN_DataType bramLayerResults[KInput + NumberOfHidden * N + NOutput];
+    static NN_DataType bramWeight[weightBufferSize];
+    static NN_DataType bramBias[biasBufferSize];
+    NN_DataType inputData[hwNumberInputs];
+    NN_DataType layerBuffer0[layerBufferSize], layerBuffer1[layerBufferSize];
+    NN_DataType bramLayerResults[layerResultsBufferSize];
 
     if (*loadParameters != 0)
     {

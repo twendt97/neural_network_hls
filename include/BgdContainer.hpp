@@ -67,7 +67,7 @@ public:
 
     ~BgdContainer();
 
-    void optimizeAndTest(void);
+    bool optimizeAndTest(void);
 };
 
 BgdContainer::~BgdContainer()
@@ -172,7 +172,7 @@ void BgdContainer::xorTruthTableToClasses(void)
         // fill remaining output entries with 0
         for (std::size_t j = 2; j < this->numberOutputs; j++)
         {
-            this->trainingClasses[i * numberOutputs + j] = 0;
+            this->trainingClasses[i * this->numberOutputs + j] = 0;
         }
     }
 }
@@ -236,7 +236,7 @@ void BgdContainer::optimizeHardware(void)
     this->mlpInstance->setExportLayers(true);
     for (std::size_t i = 0; i < this->epochs; i++)
     {
-        unsigned int loadParametersBgd = i == 0 ? (unsigned int)1 : (unsigned int)1;
+        unsigned int loadParametersBgd = i == 0 ? (unsigned int)1 : (unsigned int)0;
         for (std::size_t j = 0; j < this->numberTrainingSamples / this->batchSize; j++)
         {
             this->mlpInstance->setLoadParameters(true);
@@ -297,7 +297,7 @@ float BgdContainer::hardwareAccuracy(void)
     return (numCorrect / this->numberTrainingSamples);
 }
 
-void BgdContainer::optimizeAndTest(void)
+bool BgdContainer::optimizeAndTest(void)
 {
     this->createTruthTableAsTrainingData();
     this->xorTruthTableToClasses();
@@ -305,5 +305,5 @@ void BgdContainer::optimizeAndTest(void)
     this->optimizeReference();
     std::cout << "Starting hardware optimization..." << std::endl << std::flush;
     this->optimizeHardware();
-    this->mlpInstance->testHwAgainstReference();
+    return this->mlpInstance->hwParametersEqualReference();
 }

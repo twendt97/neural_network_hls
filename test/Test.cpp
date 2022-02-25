@@ -2,10 +2,8 @@
 #define TEST_MLP_CRANIUM
 #define TEST_TRAINING
 // #define EXPORT_MNIST
-// #define TEST_TRAINING_COMPONENTS
 
-#include "Settings.hpp"
-#include "Simulation.hpp"
+#include "include/Simulation.hpp"
 #include <vector>
 #include <iostream>
 #include <random>
@@ -37,7 +35,8 @@ int main(void)
 
 #ifdef TEST_MLP_CRANIUM
     MlpContainer *mlp = new MlpContainer(NUMBER_NEURONS, NUMBER_HIDDEN, NUMBER_INPUTS, NUMBER_OUTPUTS);
-    mlp->testHwAgainstReference(1e-3);
+    if(mlp->testHwAgainstReference(1e-3) == false)
+        return_value = 1;
     delete mlp;
 
 #endif
@@ -62,7 +61,8 @@ int main(void)
     // createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, NOutput);
 
     BgdContainer *bgd = new BgdContainer(NUMBER_NEURONS, NUMBER_HIDDEN, NUMBER_INPUTS, NUMBER_OUTPUTS, batchSize, epochs, learningRate);
-    bgd->optimizeAndTest();
+    if(bgd->optimizeAndTest() == false)
+        return_value = 1;
     delete bgd;
 
 #ifdef EXPORT_MNIST
