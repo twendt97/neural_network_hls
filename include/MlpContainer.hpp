@@ -78,10 +78,13 @@ public:
     NN_DataType *getInputAddress(void);
     NN_DataType *getLayerBufferAddress(void);
     NN_DataType *getOutputAddress(void);
+    std::size_t getWeightBufferSize(void);
+    std::size_t getBiasBufferSize(void);
+    std::size_t getLayerBufferSize(void);
     Network *getReferenceImplementation(void);
     bool getLoadParameter(void);
     bool getExportLayer(void);
-
+    
     bool testHwAgainstReference(NN_DataType precision = 1e-3);
     bool hwParametersEqualReference(NN_DataType precision = 1e-3);
 };
@@ -272,6 +275,21 @@ NN_DataType *MlpContainer::getOutputAddress(void)
 Network *MlpContainer::getReferenceImplementation(void)
 {
     return this->referenceImplementation;
+}
+
+std::size_t MlpContainer::getWeightBufferSize(void)
+{
+    return this->weightBufferSize;
+}
+
+std::size_t MlpContainer::getBiasBufferSize(void)
+{
+    return this->biasBufferSize;
+}
+
+std::size_t MlpContainer::getLayerBufferSize(void)
+{
+    return this->layerBufferSize;
 }
 
 // private functions

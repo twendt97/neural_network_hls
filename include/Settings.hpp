@@ -12,14 +12,21 @@ using NN_DataType = float;
 
 // The following parameters are settings for the simulation
 // Neural network
-constexpr std::size_t NUMBER_NEURONS = 4;
-constexpr std::size_t NUMBER_INPUTS = 4;
-constexpr std::size_t NUMBER_OUTPUTS = 4;
-constexpr std::size_t NUMBER_HIDDEN = 1;
+constexpr std::size_t simNumberNeurons = 4;
+constexpr std::size_t simNumberInputs = 4;
+constexpr std::size_t simNumberOutputs = 4;
+constexpr std::size_t simNumberHidden = 1;
+
 // Training
-constexpr unsigned batchSize = 16;
+constexpr unsigned simBatchSize = 16;
 constexpr NN_DataType learningRate = 0.5;
-constexpr unsigned epochs = 2000;
+constexpr unsigned epochs = 2;
+
+// parameters for MLP testbench
+constexpr std::size_t axiWeightDepth = simNumberNeurons * (simNumberInputs + (simNumberHidden - 1) * simNumberNeurons + simNumberOutputs);
+constexpr std::size_t axiBiasDepth = simNumberHidden * simNumberNeurons + simNumberOutputs;
+constexpr std::size_t axiLayerResultsDepth = axiBiasDepth + simNumberInputs;
+constexpr std::size_t axiBatchResultsDepth = simBatchSize * axiLayerResultsDepth;
 
 // The following parameters determine the amount of BRAM ressources consumed by the kernels
 // In order to fulfill the requirements of the application the following constraints must be satisfied
@@ -28,7 +35,7 @@ constexpr unsigned epochs = 2000;
 // the limiting factor
 // weightBufferSize >= NUMBER_NEURONS * (NUMBER_INPUTS + (NUMBER_HIDDEN - 1) * NUMBER_NEURONS + NUMBER_OUTPUTS)
 // biasBufferSize >= NUMBER_HIDDEN * NUMBER_NEURONS + NUMBER_OUTPUTS
-// maxSamples >= expected batch size
+// hwMaxBatchSize >= expected batch size
 // layerBufferSize >= NUMBER_NEURONS
 // layerResultsBufferSize >= biasBufferSize + NUMBER_INPUTS
 
@@ -41,7 +48,7 @@ constexpr std::size_t biasBufferSize = hwNumberHiddenLayers * hwNumberNeurons + 
 
 constexpr std::size_t layerBufferSize = hwNumberNeurons;
 constexpr std::size_t layerResultsBufferSize = biasBufferSize + hwNumberInputs;
-constexpr std::size_t maxSamples = 20;
+constexpr std::size_t hwMaxBatchSize = 20;
 
 constexpr unsigned ParEntries = 4;
 constexpr unsigned logParEntries = 2;

@@ -23,12 +23,12 @@ void BGD(
     const unsigned int *batchSize,
     const NN_DataType *learningRate)
 {
-#pragma HLS INTERFACE m_axi port = axiMlpResultsInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * maxSamples * (NumberOfHidden * N + NOutput + KInput)
-#pragma HLS INTERFACE m_axi port = axiClassesInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * maxSamples * NOutput
-#pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K
-#pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * NumberOfHidden * N + NOutput
-#pragma HLS INTERFACE m_axi port = axiWeightOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = 2 * KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K
-#pragma HLS INTERFACE m_axi port = axiBiasOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = 2 * NumberOfHidden * N + NOutput
+#pragma HLS INTERFACE m_axi port = axiMlpResultsInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiBatchResultsDepth
+#pragma HLS INTERFACE m_axi port = axiClassesInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = simBatchSize * simNumberOutputs
+#pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiWeightDepth
+#pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiBiasDepth
+#pragma HLS INTERFACE m_axi port = axiWeightOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = axiWeightDepth
+#pragma HLS INTERFACE m_axi port = axiBiasOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = axiBiasDepth
 #pragma HLS INTERFACE s_axilite port = return
 #pragma HLS INTERFACE s_axilite port = numberInputs
 #pragma HLS INTERFACE s_axilite port = numberOutputs
@@ -42,8 +42,8 @@ void BGD(
     static NN_DataType bramBias[biasBufferSize];
     static NN_DataType bramWeightGradientAvg[weightBufferSize];
     static NN_DataType bramBiasGradientAvg[biasBufferSize];
-    NN_DataType bramClasses[maxSamples * hwNumberOutputs];
-    NN_DataType bramMlpResults[maxSamples * layerResultsBufferSize];
+    NN_DataType bramClasses[hwMaxBatchSize * hwNumberOutputs];
+    NN_DataType bramMlpResults[hwMaxBatchSize * layerResultsBufferSize];
     NN_DataType bramError0[layerBufferSize], bramError1[layerBufferSize];
     NN_DataType *currentResults, *currentClasses;
 

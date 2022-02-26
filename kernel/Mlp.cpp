@@ -21,11 +21,11 @@ void MLP(
     const unsigned int *loadParameters,
     const unsigned int *exportLayers)
 {
-#pragma HLS INTERFACE m_axi port = input offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * KInput
-#pragma HLS INTERFACE m_axi port = output offset = slave bundle = axi_write max_write_burst_length = 128 depth = 2 * NOutput
-#pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * (KInput * N + (NumberOfHidden - 1) * N * K + NOutput * K)
-#pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = 2 * (NumberOfHidden * N + NOutput)
-#pragma HLS INTERFACE m_axi port = axiLayerOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = 2 * (KInput + NumberOfHidden * N + NOutput)
+#pragma HLS INTERFACE m_axi port = input offset = slave bundle = axi_read max_read_burst_length = 128 depth = simNumberInputs
+#pragma HLS INTERFACE m_axi port = output offset = slave bundle = axi_write max_write_burst_length = 128 depth = simNumberOutputs
+#pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiWeightDepth
+#pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiBiasDepth
+#pragma HLS INTERFACE m_axi port = axiLayerOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = axiLayerResultsDepth
 #pragma HLS INTERFACE s_axilite port = return
 #pragma HLS INTERFACE s_axilite port = numberInputs
 #pragma HLS INTERFACE s_axilite port = numberOutputs

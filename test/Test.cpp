@@ -1,6 +1,6 @@
 // defines for compilation behavior
-#define TEST_MLP_CRANIUM
-#define TEST_TRAINING
+// #define TEST_MLP_CRANIUM
+// #define TEST_TRAINING
 // #define EXPORT_MNIST
 
 #include "include/Simulation.hpp"
@@ -34,7 +34,7 @@ int main(void)
     srand((unsigned int)2);
 
 #ifdef TEST_MLP_CRANIUM
-    MlpContainer *mlp = new MlpContainer(NUMBER_NEURONS, NUMBER_HIDDEN, NUMBER_INPUTS, NUMBER_OUTPUTS);
+    MlpContainer *mlp = new MlpContainer(simNumberNeurons, simNumberHidden, simNumberInputs, simNumberOutputs);
     if(mlp->testHwAgainstReference(1e-3) == false)
         return_value = 1;
     delete mlp;
@@ -60,7 +60,7 @@ int main(void)
     // assert(mnistClassesVector != NULL);
     // createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, NOutput);
 
-    BgdContainer *bgd = new BgdContainer(NUMBER_NEURONS, NUMBER_HIDDEN, NUMBER_INPUTS, NUMBER_OUTPUTS, batchSize, epochs, learningRate);
+    BgdContainer *bgd = new BgdContainer(simNumberNeurons, simNumberHidden, simNumberInputs, simNumberOutputs, simBatchSize, epochs, learningRate);
     if(bgd->optimizeAndTest() == false)
         return_value = 1;
     delete bgd;
