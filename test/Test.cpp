@@ -61,7 +61,7 @@ int main(void)
     // createClasses<NN_DataType>(mnistDataSet, mnistClassesVector, NOutput);
 
     BgdContainer *bgd = new BgdContainer(simNumberNeurons, simNumberHidden, simNumberInputs, simNumberOutputs, simBatchSize, epochs, learningRate);
-    if(bgd->optimizeAndTest() == false)
+    if(bgd->optimizeAndTest(true) == false)
         return_value = 1;
     delete bgd;
 

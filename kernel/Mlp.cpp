@@ -21,12 +21,13 @@ void MLP(
     const unsigned int *loadParameters,
     const unsigned int *exportLayers)
 {
-#pragma HLS INTERFACE m_axi port = input offset = slave bundle = axi_read max_read_burst_length = 128 depth = simNumberInputs
-#pragma HLS INTERFACE m_axi port = output offset = slave bundle = axi_write max_write_burst_length = 128 depth = simNumberOutputs
-#pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiWeightDepth
-#pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiBiasDepth
-#pragma HLS INTERFACE m_axi port = axiLayerOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = axiLayerResultsDepth
-#pragma HLS INTERFACE s_axilite port = return
+#pragma HLS INTERFACE m_axi port = input offset = slave bundle = read max_read_burst_length = 128 depth = simNumberInputs
+#pragma HLS INTERFACE m_axi port = output offset = slave bundle = write max_write_burst_length = 128 depth = simNumberOutputs
+#pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = read max_read_burst_length = 128 depth = axiWeightDepth
+#pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = read max_read_burst_length = 128 depth = axiBiasDepth
+#pragma HLS INTERFACE m_axi port = axiLayerOutput offset = slave bundle = write max_write_burst_length = 128 depth = axiLayerResultsDepth
+//#pragma HLS INTERFACE s_axilite port = return
+#pragma HLS INTERFACE ap_ctrl_hs port = return
 #pragma HLS INTERFACE s_axilite port = numberInputs
 #pragma HLS INTERFACE s_axilite port = numberOutputs
 #pragma HLS INTERFACE s_axilite port = numberLayers

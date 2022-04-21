@@ -23,13 +23,14 @@ void BGD(
     const unsigned int *batchSize,
     const NN_DataType *learningRate)
 {
-#pragma HLS INTERFACE m_axi port = axiMlpResultsInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiBatchResultsDepth
-#pragma HLS INTERFACE m_axi port = axiClassesInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = simBatchSize * simNumberOutputs
-#pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiWeightDepth
-#pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = axi_read max_read_burst_length = 128 depth = axiBiasDepth
-#pragma HLS INTERFACE m_axi port = axiWeightOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = axiWeightDepth
-#pragma HLS INTERFACE m_axi port = axiBiasOutput offset = slave bundle = axi_write max_write_burst_length = 128 depth = axiBiasDepth
-#pragma HLS INTERFACE s_axilite port = return
+#pragma HLS INTERFACE m_axi port = axiMlpResultsInput offset = slave bundle = read max_read_burst_length = 128 depth = axiBatchResultsDepth
+#pragma HLS INTERFACE m_axi port = axiClassesInput offset = slave bundle = read max_read_burst_length = 128 depth = simBatchSize * simNumberOutputs
+#pragma HLS INTERFACE m_axi port = axiWeightInput offset = slave bundle = read max_read_burst_length = 128 depth = axiWeightDepth
+#pragma HLS INTERFACE m_axi port = axiBiasInput offset = slave bundle = read max_read_burst_length = 128 depth = axiBiasDepth
+#pragma HLS INTERFACE m_axi port = axiWeightOutput offset = slave bundle = write max_write_burst_length = 128 depth = axiWeightDepth
+#pragma HLS INTERFACE m_axi port = axiBiasOutput offset = slave bundle = write max_write_burst_length = 128 depth = axiBiasDepth
+//#pragma HLS INTERFACE s_axilite port = return
+#pragma HLS INTERFACE ap_ctrl_hs port = return
 #pragma HLS INTERFACE s_axilite port = numberInputs
 #pragma HLS INTERFACE s_axilite port = numberOutputs
 #pragma HLS INTERFACE s_axilite port = numberLayers

@@ -68,5 +68,6 @@
         "strstream": "cpp",
         "valarray": "cpp",
         "cassert": "cpp"
-    }
+    },
+    "editor.wordWrap": "on"
 }

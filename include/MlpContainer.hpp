@@ -192,6 +192,16 @@ bool MlpContainer::testHwAgainstReference(NN_DataType precision)
     }
     Matrix *referenceInput = createMatrix(1, this->numberInputs, referenceInputData);
     forwardPass(this->referenceImplementation, referenceInput);
+    this->loadParameters = 1;
+    this->exportLayers = 1;
+    this->feedForward();
+
+    this->loadParameters = 1;
+    this->exportLayers = 0;
+    this->feedForward();
+
+    this->loadParameters = 0;
+    this->exportLayers = 0;
     this->feedForward();
 
     Matrix *referenceOutput = getOuput(this->referenceImplementation);

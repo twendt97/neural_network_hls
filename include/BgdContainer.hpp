@@ -49,6 +49,7 @@ private:
 
     void updateBufferSizes(void);
     void createTruthTableAsTrainingData(void);
+    void createRandomTrainingData(size_t numberSamples);
     void xorTruthTableToClasses(void);
     void optimizeReference(void);
     void optimizeHardware(void);
@@ -67,7 +68,7 @@ public:
 
     ~BgdContainer();
 
-    bool optimizeAndTest(void);
+    bool optimizeAndTest(bool random);
 };
 
 BgdContainer::~BgdContainer()
@@ -174,6 +175,32 @@ void BgdContainer::xorTruthTableToClasses(void)
         {
             this->trainingClasses[i * this->numberOutputs + j] = 0;
         }
+    }
+}
+
+void BgdContainer::createRandomTrainingData(size_t numberSamples)
+{
+    assert(numberSamples % this->batchSize == 0);
+    this->numberTrainingSamples = numberSamples;
+    free(this->trainingData);
+    this->trainingData = (NN_DataType *)malloc(this->numberTrainingSamples * this->numberInputs * sizeof(NN_DataType));
+    free(this->trainingClasses);
+    this->trainingClasses = (NN_DataType *)malloc(this->numberTrainingSamples * this->numberOutputs * sizeof(NN_DataType));
+    this->mlpInstance->setInputAddress(this->trainingData);
+
+    for (std::size_t i = 0; i < this->numberTrainingSamples; i++)
+    {
+        for (std::size_t j = 0; j < this->numberInputs; j++)
+        {
+            this->trainingData[i * numberInputs + j] = ((NN_DataType)(rand() % 100)) / 100.0;
+        }
+
+        for (std::size_t j = 0; j < this->numberOutputs; j++)
+        {
+            this->trainingClasses[i * numberOutputs + j] = 0;
+        }
+        int index = rand() % this->numberOutputs;
+        this->trainingClasses[i * numberOutputs + index] = 1;
     }
 }
 
@@ -297,13 +324,41 @@ float BgdContainer::hardwareAccuracy(void)
     return (numCorrect / this->numberTrainingSamples);
 }
 
-bool BgdContainer::optimizeAndTest(void)
+bool BgdContainer::optimizeAndTest(bool random)
 {
-    this->createTruthTableAsTrainingData();
-    this->xorTruthTableToClasses();
-    std::cout << "Starting optimization of the reference implementation..." << std::endl << std::flush;
+    if (random)
+        this->createRandomTrainingData(this->batchSize);
+    else
+    {
+        this->createTruthTableAsTrainingData();
+        this->xorTruthTableToClasses();
+    }
+    std::cout << "Starting optimization of the reference implementation..." << std::endl
+              << std::flush;
     this->optimizeReference();
-    std::cout << "Starting hardware optimization..." << std::endl << std::flush;
+    // Network *net = this->mlpInstance->getReferenceImplementation();
+    // for (std::size_t i = 0; i < net->numConnections; i++)
+    // {
+    //     std::cout << "Weights of connection " << i << std::endl << std::flush;
+    //     for (std::size_t j = 0; j < net->connections[i]->weights->rows; j++)
+    //     {
+    //         for (size_t k = 0; k < net->connections[i]->weights->cols; k++)
+    //         {
+    //             std::cout << getMatrix(net->connections[i]->weights, j, k) << " " << std::flush;
+    //         }
+    //         std::cout << std::endl << std::flush;
+    //     }
+    //     std::cout << std::endl << std::flush;
+    //     std::cout << "Bias of connection " << i << std::endl << std::flush;
+    //     for (std::size_t j = 0; j < net->connections[i]->bias->cols * net->connections[i]->bias->rows; j++)
+    //     {
+    //         std::cout << net->connections[i]->bias->data[j] << " " << std::endl << std::flush;
+    //     }
+    //     std::cout << std::endl << std::flush;
+    // }
+
+    std::cout << "Starting hardware optimization..." << std::endl
+              << std::flush;
     this->optimizeHardware();
     return this->mlpInstance->hwParametersEqualReference();
 }

@@ -376,7 +376,6 @@ namespace uz_mlp
                 for (unsigned int j = 0; j < t_ParEntries; j++)
                 {
                     l_weightGradient[j] = l_outputPrevLayer[j] * l_currentError[0];
-                    // p_weightGradient[n * p_k + k * t_ParEntries + j] = l_outputPrevLayer[j] * l_currentError[0];
                 }
                 p_weightGradient.write(l_weightGradient);
             }
@@ -415,6 +414,7 @@ namespace uz_mlp
             {
                 t_DataType l_accumulator = p_initZero == true ? (t_DataType)0 : p_accumulator[i * t_ParEntries + j];
                 p_accumulator[i * t_ParEntries + j] = l_accumulator + l_values[j];
+#pragma HLS DEPENDENCE variable = p_accumulator false
             }
         }
     }
